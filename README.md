@@ -26,7 +26,7 @@ Zustand · Postgres 16 · Node 22 worker · AISStream.io firehose
 
 ```
 apps/
-  web/              Next.js 16 app (issue #3+)
+  web/              Next.js 16.2 app — Tailwind 4, shadcn/ui, dark theme
   worker/           Node 22 AIS worker (issue #4+)
 packages/
   shared/           Shared TypeScript types and region definitions
@@ -81,6 +81,25 @@ Other helpers:
 | `pnpm db:reset`    | **Destructive.** Drop the data volume, restart, re-migrate.         |
 | `pnpm db:migrate`  | Apply any unapplied Drizzle migrations.                             |
 | `pnpm db:generate` | Generate a new migration after editing `packages/db/src/schema.ts`. |
+
+### Web app
+
+The Next.js shell lives in `apps/web/`. It boots into a dark theme via
+`next-themes` and serves a placeholder landing page until live data arrives
+in M2/M3.
+
+```bash
+# one-time: copy the env template and paste in your Mapbox public token
+cp apps/web/.env.example apps/web/.env.local
+# then edit apps/web/.env.local and set NEXT_PUBLIC_MAPBOX_TOKEN
+
+# start the dev server
+pnpm --filter @maritime/web dev
+```
+
+A free Mapbox public token (the `pk.…` form) comes from
+[account.mapbox.com](https://account.mapbox.com). Domain-lock the token
+before deploying anywhere public.
 
 Application code arrives across milestones M1–M4. See [`PRD.md`](./PRD.md) §10
 for the milestone breakdown and the [GitHub issues](https://github.com/ozan2025/maritime-choke-points/issues)

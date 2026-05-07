@@ -1,4 +1,6 @@
 import js from "@eslint/js";
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
 import prettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
 
@@ -9,18 +11,15 @@ import tseslint from "typescript-eslint";
 // runs `eslint .` from the repo root. Workspace-specific rule sets are added
 // here as additional config objects scoped via the `files:` field.
 //
-// Issue #3 will add Next.js rules in this file along the lines of:
-//
-//   import { FlatCompat } from "@eslint/eslintrc";
-//   const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
-//   ...compat.extends("next/core-web-vitals").map((c) => ({
-//     ...c,
-//     files: ["apps/web/**/*.{ts,tsx,js,jsx}"],
-//   })),
-//
-// (with `next` and `@eslint/eslintrc` installed at that point). The root
-// config remains the single source of truth; per-workspace ESLint configs
-// would silently no-op under the current `pnpm lint` invocation.
+// Next.js 16+ ships native flat configs at `eslint-config-next/core-web-vitals`
+// and `eslint-config-next/typescript`. We re-export them with a `files` filter
+// so Next's React / a11y / image rules apply only inside `apps/web/**`.
+// FlatCompat is no longer needed for this — Next 16 dropped the legacy
+// `extends`-style export.
+
+const webGlob = ["apps/web/**/*.{ts,tsx,js,jsx,mjs,cjs}"];
+
+const scopeToWeb = (configs) => configs.map((c) => ({ ...c, files: webGlob }));
 
 export default [
   {
@@ -38,5 +37,16 @@ export default [
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  ...scopeToWeb(nextCoreWebVitals),
+  ...scopeToWeb(nextTypescript),
+  {
+    // App Router project — the no-html-link-for-pages rule is for the
+    // legacy `pages/` router and emits a noisy "Pages directory cannot be
+    // found" message at lint time. Turn it off for apps/web.
+    files: webGlob,
+    rules: {
+      "@next/next/no-html-link-for-pages": "off",
+    },
+  },
   prettier,
 ];
