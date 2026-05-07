@@ -77,3 +77,15 @@ export const vessels = pgTable("vessels", {
   destination: text("destination"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
 });
+
+// Inferred row types — use these in workers and server queries instead of
+// reaching for `InferSelectModel<typeof …>`. The `$inferInsert` variant
+// makes optional/defaulted columns optional in the input shape.
+export type VesselPositionRecent = typeof vesselPositionsRecent.$inferSelect;
+export type NewVesselPositionRecent = typeof vesselPositionsRecent.$inferInsert;
+
+export type VesselPositionHourly = typeof vesselPositionsHourly.$inferSelect;
+export type NewVesselPositionHourly = typeof vesselPositionsHourly.$inferInsert;
+
+export type Vessel = typeof vessels.$inferSelect;
+export type NewVessel = typeof vessels.$inferInsert;
