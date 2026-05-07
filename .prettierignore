@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+out/
+.next/
+.turbo/
+.cache/
+coverage/
+pnpm-lock.yaml
+LICENSE
+
+# Source-of-truth documents — preserve exact author formatting
+PRD.md
+1-maritime-choke-points.md
+
+# Validation spike scripts — throwaway, kept as-is for historical reference
+scripts/
