@@ -127,13 +127,17 @@ export class SyntheticSource implements VesselSource {
     let nextCog = vessel.cog;
 
     const bbox = REGIONS[vessel.region];
+    // Heading is degrees clockwise from north, so dLat ∝ cos(h) and
+    // dLon ∝ sin(h). Reflecting across the lat edge flips the cos term
+    // (h' = 180 − h); reflecting across the lon edge flips the sin term
+    // (h' = 360 − h).
     if (nextLat < bbox.sw[0] || nextLat > bbox.ne[0]) {
       nextLat = vessel.lat - dLat;
-      nextCog = (360 - nextCog + 360) % 360;
+      nextCog = (180 - nextCog + 360) % 360;
     }
     if (nextLon < bbox.sw[1] || nextLon > bbox.ne[1]) {
       nextLon = vessel.lon - dLon;
-      nextCog = (180 - nextCog + 360) % 360;
+      nextCog = (360 - nextCog + 360) % 360;
     }
 
     nextCog = (nextCog + (this.random() - 0.5) * 4 + 360) % 360;
