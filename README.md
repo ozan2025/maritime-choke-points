@@ -30,16 +30,19 @@ apps/
   worker/           Node 22 AIS worker (issue #4+)
 packages/
   shared/           Shared TypeScript types and region definitions
+  db/               Drizzle schema + migrations for local Postgres
 scripts/            Validation spike scripts (used during PRD discovery)
 .github/            CI workflow + Dependabot
+docker-compose.yml  Local Postgres 16 service for development
 PRD.md              Source-of-truth design document
 CONTRIBUTING.md     Branching, PR, and commit conventions
 ```
 
 ## Quickstart
 
-Requires **Node 22+**. Package manager is **pnpm 9** (pinned via the root
-`packageManager` field — Corepack will fetch the correct version).
+Requires **Node 22+**, **pnpm 9** (pinned via the root `packageManager` field —
+Corepack will fetch the correct version), and **Docker Desktop** (for the local
+Postgres container).
 
 ```bash
 # one-time: enable Corepack (ships with Node 22)
@@ -53,6 +56,31 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 ```
+
+### Database
+
+The local Postgres 16 instance runs in a Docker container defined by
+`docker-compose.yml`. Drizzle owns the schema (`packages/db/src/schema.ts`)
+and the generated migrations (`packages/db/migrations/`).
+
+```bash
+# one-time: copy local env file (gitignored)
+cp .env.example .env
+
+# bring up Postgres and apply migrations
+pnpm db:up
+pnpm db:migrate
+```
+
+Other helpers:
+
+| Script             | What it does                                                        |
+| ------------------ | ------------------------------------------------------------------- |
+| `pnpm db:up`       | Start the `db` container; blocks until the healthcheck passes.      |
+| `pnpm db:down`     | Stop the container (keeps the data volume).                         |
+| `pnpm db:reset`    | **Destructive.** Drop the data volume, restart, re-migrate.         |
+| `pnpm db:migrate`  | Apply any unapplied Drizzle migrations.                             |
+| `pnpm db:generate` | Generate a new migration after editing `packages/db/src/schema.ts`. |
 
 Application code arrives across milestones M1–M4. See [`PRD.md`](./PRD.md) §10
 for the milestone breakdown and the [GitHub issues](https://github.com/ozan2025/maritime-choke-points/issues)

@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: maritime-db
+    restart: unless-stopped
+    ports:
+      # Bind to loopback only so the dev DB is not exposed on the LAN.
+      # Override the host port via POSTGRES_HOST_PORT in .env if 5432 is
+      # already taken on the host (e.g. a system Postgres).
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-maritime}
+      POSTGRES_USER: ${POSTGRES_USER:-maritime}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maritime}
+    volumes:
+      - maritime_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-maritime} -d ${POSTGRES_DB:-maritime}"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  maritime_pg_data:
