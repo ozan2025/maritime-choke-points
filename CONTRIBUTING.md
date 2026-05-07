@@ -69,8 +69,18 @@ Code session (or human reviewer) for review.
 - **Node** 22+ (required by `engines`)
 - **pnpm** 9.x (pinned via `packageManager`; Corepack will fetch it)
 - **TypeScript** strict, with `noUncheckedIndexedAccess` and `noImplicitOverride`
-- **ESLint** flat config (root: JS/TS hygiene; `eslint-config-next` is added
-  per-workspace in `apps/web` once Next.js is installed)
+- **ESLint** flat config — a single root `eslint.config.mjs` that covers every
+  workspace. ESLint 9 flat config does not auto-discover nested configs;
+  workspace-specific rule sets are layered into the root config and scoped
+  via `files:` (e.g. `files: ["apps/web/**/*.{ts,tsx}"]`). Issue #3 adds the
+  Next.js rules this way once Next is installed in `apps/web`.
+- **Worker module resolution** — `apps/worker/tsconfig.json` overrides
+  `module` and `moduleResolution` to `NodeNext`. The base config defaults to
+  bundler-style resolution (correct for Next.js), which would let extension-
+  less imports pass typecheck and then fail at runtime under Node ESM.
+- **`@maritime/shared`** ships raw TypeScript (no `dist/` build). The web app
+  is bundled by Next; the worker will run via `tsx`. See
+  `packages/shared/README.md` for when that changes.
 - **Prettier** 3 with `printWidth: 100`, double quotes, `trailingComma: all`
 
 Run `pnpm lint && pnpm typecheck && pnpm format:check` locally before pushing

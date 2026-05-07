@@ -2,11 +2,25 @@ import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
 
-// Note: Next.js-specific rules (`eslint-config-next`) are intentionally NOT
-// configured at the root. They will be added by issue #3 inside
-// `apps/web/eslint.config.mjs` once Next.js itself is installed in that
-// workspace — the standard monorepo pattern. The root config covers
-// language-level (JS/TS) hygiene for every package.
+// Flat-config monorepo strategy
+// ─────────────────────────────
+// ESLint 9 flat config does NOT auto-discover nested `eslint.config.mjs`
+// files in workspaces. There is exactly one config (this one), and `pnpm lint`
+// runs `eslint .` from the repo root. Workspace-specific rule sets are added
+// here as additional config objects scoped via the `files:` field.
+//
+// Issue #3 will add Next.js rules in this file along the lines of:
+//
+//   import { FlatCompat } from "@eslint/eslintrc";
+//   const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
+//   ...compat.extends("next/core-web-vitals").map((c) => ({
+//     ...c,
+//     files: ["apps/web/**/*.{ts,tsx,js,jsx}"],
+//   })),
+//
+// (with `next` and `@eslint/eslintrc` installed at that point). The root
+// config remains the single source of truth; per-workspace ESLint configs
+// would silently no-op under the current `pnpm lint` invocation.
 
 export default [
   {
