@@ -1,0 +1,42 @@
+{
+  "name": "maritime-choke-points",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Real-time AIS dashboard for the Strait of Malacca / Singapore corridor with a coverage-gap monitor for Hormuz, Suez, and Bab el-Mandeb.",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.21.0",
+    "@typescript-eslint/parser": "^8.21.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.1",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.21.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}
