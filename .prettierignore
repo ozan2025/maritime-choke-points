@@ -15,3 +15,8 @@ PRD.md
 
 # Validation spike scripts — throwaway, kept as-is for historical reference
 scripts/
+
+# Drizzle-managed artifacts. drizzle-kit rewrites these on every `generate`,
+# so reformatting them in this repo would just churn on the next migration.
+packages/db/migrations/
+
