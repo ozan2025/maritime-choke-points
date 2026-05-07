@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: maritime-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-maritime}
+      POSTGRES_USER: ${POSTGRES_USER:-maritime}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maritime}
+    volumes:
+      - maritime_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-maritime} -d ${POSTGRES_DB:-maritime}"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  maritime_pg_data:
