@@ -27,7 +27,7 @@ Zustand · Postgres 16 · Node 22 worker · AISStream.io firehose
 ```
 apps/
   web/              Next.js 16.2 app — Tailwind 4, shadcn/ui, dark theme
-  worker/           Node 22 AIS worker (issue #4+)
+  worker/           Node 22 worker — WebSocket fan-out of vessel positions
 packages/
   shared/           Shared TypeScript types and region definitions
   db/               Drizzle schema + migrations for local Postgres
@@ -104,6 +104,27 @@ before deploying anywhere public.
 Application code arrives across milestones M1–M4. See [`PRD.md`](./PRD.md) §10
 for the milestone breakdown and the [GitHub issues](https://github.com/ozan2025/maritime-choke-points/issues)
 for the next concrete unit of work.
+
+### Worker
+
+The worker holds the upstream AIS connection (synthetic stream in M2,
+AISStream.io in M3) and fans out vessel positions to subscribed browsers
+over a WebSocket. The wire format lives in `packages/shared/src/wire.ts`.
+
+```bash
+# one-time: copy the env template
+cp apps/worker/.env.example apps/worker/.env.local
+
+# start the worker (auto-reload on change)
+pnpm --filter @maritime/worker dev
+```
+
+The worker listens on `WORKER_WS_PORT` (default `8787`). Browsers connect
+to `ws://localhost:8787` — match the URL via `NEXT_PUBLIC_WORKER_WS_URL`
+in `apps/web/.env.local`. Subscribe with a single
+`{"type":"subscribe","regions":["malaccaSingapore"]}` frame; the server
+replies with one `snapshot`, then streams `position` events filtered to
+the requested regions.
 
 ## Development
 
