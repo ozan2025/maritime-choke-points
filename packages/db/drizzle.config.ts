@@ -1,7 +1,9 @@
+import path from "node:path";
+
 import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-config({ path: "../../.env" });
+config({ path: path.join(import.meta.dirname, "../../.env") });
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
