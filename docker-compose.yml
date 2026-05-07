@@ -4,7 +4,10 @@ services:
     container_name: maritime-db
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      # Bind to loopback only so the dev DB is not exposed on the LAN.
+      # Override the host port via POSTGRES_HOST_PORT in .env if 5432 is
+      # already taken on the host (e.g. a system Postgres).
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-maritime}
       POSTGRES_USER: ${POSTGRES_USER:-maritime}
