@@ -37,3 +37,6 @@ coverage/
 # Tooling caches
 .turbo/
 .cache/
+
+# Local-only session handovers (never committed; may contain API keys)
+HANDOVER-*.md
