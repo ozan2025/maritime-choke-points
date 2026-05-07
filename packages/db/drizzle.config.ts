@@ -1,9 +1,12 @@
-import path from "node:path";
-
 import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-config({ path: path.join(import.meta.dirname, "../../.env") });
+// Path is intentionally relative to cwd, not the source file. drizzle-kit
+// transpiles this config to CJS via esbuild before loading it, which makes
+// `import.meta.dirname` undefined here (unlike in `src/migrate.ts`). It is
+// safe to assume the cwd is this package, because drizzle-kit always chdir's
+// to the directory containing `drizzle.config.ts` before evaluating it.
+config({ path: "../../.env" });
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
