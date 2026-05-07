@@ -8,18 +8,9 @@ importers:
 
   .:
     devDependencies:
-      '@eslint/eslintrc':
-        specifier: ^3.2.0
-        version: 3.3.5
       '@eslint/js':
         specifier: ^9.18.0
         version: 9.39.4
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.21.0
-        version: 8.59.2(@typescript-eslint/parser@8.59.2(eslint@9.39.4)(typescript@5.9.3))(eslint@9.39.4)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.21.0
-        version: 8.59.2(eslint@9.39.4)(typescript@5.9.3)
       eslint:
         specifier: ^9.18.0
         version: 9.39.4
