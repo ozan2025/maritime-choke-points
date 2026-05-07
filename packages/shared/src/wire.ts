@@ -29,6 +29,10 @@ export type ClientMessage = SubscribeMessage;
 
 export interface SnapshotMessage {
   type: "snapshot";
+  /** The regions this snapshot covers — equal to the active subscription
+   * at the moment the server replied. Lets the client drop stale state
+   * for regions it just unsubscribed from without tracking sends. */
+  regions: RegionId[];
   vessels: VesselPositionEvent[];
 }
 

@@ -84,8 +84,9 @@ export class VesselServer {
       console.log(
         `[worker] client ${client.id} subscribed to [${[...client.subscriptions].join(", ")}]`,
       );
-      const snapshot = this.source.snapshot([...client.subscriptions]);
-      this.send(client.socket, { type: "snapshot", vessels: snapshot });
+      const subscribed = [...client.subscriptions];
+      const snapshot = this.source.snapshot(subscribed);
+      this.send(client.socket, { type: "snapshot", regions: subscribed, vessels: snapshot });
     }
   }
 
