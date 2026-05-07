@@ -38,5 +38,9 @@ coverage/
 .turbo/
 .cache/
 
-# Local-only session handovers (never committed; may contain API keys)
+# Local-only session handover (never committed; contains API keys)
+# Convention: one file, HANDOVER.md, overwritten each session.
+# Pattern keeps the older HANDOVER-YYYY-MM-DD.md form ignored too in case
+# anyone accidentally reverts to that style.
+HANDOVER.md
 HANDOVER-*.md
