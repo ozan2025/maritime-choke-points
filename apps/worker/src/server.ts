@@ -6,6 +6,7 @@ import {
 } from "@maritime/shared";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { VesselSource } from "./sources/source.js";
+import type { PostgresWriter } from "./writer/postgres.js";
 
 interface ClientState {
   id: number;
@@ -16,22 +17,35 @@ interface ClientState {
 export interface VesselServerOptions {
   port: number;
   source: VesselSource;
+  /** Optional persistence sink. When provided, every position event also
+   *  goes to `vessel_positions_recent` and every static update upserts into
+   *  `vessels`. Wire fan-out is unchanged either way. */
+  writer?: PostgresWriter;
 }
 
 export class VesselServer {
   private readonly wss: WebSocketServer;
   private readonly source: VesselSource;
+  private readonly writer: PostgresWriter | undefined;
   private readonly clients = new Map<number, ClientState>();
   private nextClientId = 1;
 
   constructor(options: VesselServerOptions) {
     this.source = options.source;
+    this.writer = options.writer;
     this.wss = new WebSocketServer({ port: options.port });
   }
 
   start(): void {
     this.wss.on("connection", (socket) => this.handleConnection(socket));
-    this.source.start((event) => this.broadcast(event));
+    const writer = this.writer;
+    this.source.start({
+      onPosition: (event) => {
+        writer?.recordPosition(event);
+        this.broadcast(event);
+      },
+      onStatic: writer ? (update) => writer.upsertVessel(update) : undefined,
+    });
     const address = this.wss.address();
     const port = typeof address === "object" && address ? address.port : "?";
     console.log(`[worker] ws server listening on ws://localhost:${port}`);

@@ -18,7 +18,10 @@ import {
 export const vesselPositionsRecent = pgTable(
   "vessel_positions_recent",
   {
-    id: bigserial("id", { mode: "bigint" }).primaryKey(),
+    // bigserial.id is opaque storage — never round-tripped to a client and
+    // never compared. `number` mode keeps consumers off BigInt arithmetic;
+    // 2^53 is ~140M years away at validated AIS rates. (HANDOVER punt #8)
+    id: bigserial("id", { mode: "number" }).primaryKey(),
     mmsi: integer("mmsi").notNull(),
     observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
     latitude: doublePrecision("latitude").notNull(),

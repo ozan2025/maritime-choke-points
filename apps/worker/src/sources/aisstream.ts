@@ -1,6 +1,11 @@
 import { REGIONS, type RegionId, type VesselPositionEvent } from "@maritime/shared";
 import { WebSocket } from "ws";
-import type { VesselSource, VesselUpdateHandler } from "./source.js";
+import type {
+  VesselSource,
+  VesselSourceHandlers,
+  VesselStaticHandler,
+  VesselUpdateHandler,
+} from "./source.js";
 
 const AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream";
 const INITIAL_BACKOFF_MS = 1_000;
@@ -45,6 +50,13 @@ interface AisShipStaticData {
   Message?: {
     ShipStaticData?: {
       Type?: number;
+      Name?: string;
+      CallSign?: string;
+      ImoNumber?: number;
+      Destination?: string;
+      MaximumStaticDraught?: number;
+      /** AIS antenna offsets in meters: A bow, B stern, C port, D starboard. */
+      Dimension?: { A?: number; B?: number; C?: number; D?: number };
     };
   };
 }
@@ -84,6 +96,7 @@ export class AisStreamSource implements VesselSource {
   private backoffMs = INITIAL_BACKOFF_MS;
   private intentionallyClosed = false;
   private onUpdate: VesselUpdateHandler | null = null;
+  private onStatic: VesselStaticHandler | null = null;
 
   constructor(options: AisStreamSourceOptions) {
     this.apiKey = options.apiKey;
@@ -91,9 +104,10 @@ export class AisStreamSource implements VesselSource {
     this.regions = options.regions ?? SUBSCRIBED_REGIONS;
   }
 
-  start(onUpdate: VesselUpdateHandler): void {
+  start(handlers: VesselSourceHandlers): void {
     if (this.onUpdate) return;
-    this.onUpdate = onUpdate;
+    this.onUpdate = handlers.onPosition;
+    this.onStatic = handlers.onStatic ?? null;
     this.intentionallyClosed = false;
     this.openSocket();
   }
@@ -109,6 +123,7 @@ export class AisStreamSource implements VesselSource {
       this.socket = null;
     }
     this.onUpdate = null;
+    this.onStatic = null;
   }
 
   snapshot(regions: readonly RegionId[]): VesselPositionEvent[] {
@@ -276,16 +291,60 @@ export class AisStreamSource implements VesselSource {
 
   private handleShipStaticData(msg: AisShipStaticData): void {
     const mmsi = msg.MetaData?.MMSI;
-    const shipType = msg.Message?.ShipStaticData?.Type;
-    if (
-      typeof mmsi !== "number" ||
-      !Number.isFinite(mmsi) ||
-      typeof shipType !== "number" ||
-      !Number.isFinite(shipType)
-    ) {
-      return;
+    if (typeof mmsi !== "number" || !Number.isFinite(mmsi)) return;
+    const data = msg.Message?.ShipStaticData;
+    if (!data) return;
+
+    // Cache shipType inline so PositionReports between now and the next
+    // ShipStaticData (~6 min) can be enriched without a DB round-trip.
+    if (typeof data.Type === "number" && Number.isFinite(data.Type)) {
+      this.shipTypeByMmsi.set(mmsi, data.Type);
     }
-    this.shipTypeByMmsi.set(mmsi, shipType);
+
+    if (this.onStatic) {
+      // Each field is guarded individually — partial broadcasts are common
+      // and a downstream coalesce-merge upsert keeps richer prior values.
+      const update: Parameters<VesselStaticHandler>[0] = {
+        mmsi,
+        observedAt: new Date().toISOString(),
+      };
+      if (typeof data.Type === "number" && Number.isFinite(data.Type)) {
+        update.shipType = data.Type;
+      }
+      if (typeof data.Name === "string" && data.Name.trim() !== "") {
+        update.shipName = data.Name.trim();
+      }
+      if (typeof data.CallSign === "string" && data.CallSign.trim() !== "") {
+        update.callSign = data.CallSign.trim();
+      }
+      if (
+        typeof data.ImoNumber === "number" &&
+        Number.isFinite(data.ImoNumber) &&
+        data.ImoNumber > 0
+      ) {
+        update.imo = data.ImoNumber;
+      }
+      if (typeof data.Destination === "string" && data.Destination.trim() !== "") {
+        update.destination = data.Destination.trim();
+      }
+      if (
+        typeof data.MaximumStaticDraught === "number" &&
+        Number.isFinite(data.MaximumStaticDraught) &&
+        data.MaximumStaticDraught > 0
+      ) {
+        update.draftM = data.MaximumStaticDraught;
+      }
+      const dim = data.Dimension;
+      if (dim) {
+        const a = num(dim.A);
+        const b = num(dim.B);
+        const c = num(dim.C);
+        const d = num(dim.D);
+        if (a !== null && b !== null && a + b > 0) update.lengthM = a + b;
+        if (c !== null && d !== null && c + d > 0) update.widthM = c + d;
+      }
+      this.onStatic(update);
+    }
   }
 
   private regionForPosition(lat: number, lon: number): RegionId | null {
@@ -311,4 +370,8 @@ function frameToString(data: unknown): string | null {
 
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function num(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
