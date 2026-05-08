@@ -13,10 +13,14 @@ const STYLE_URL = "mapbox://styles/mapbox/dark-v11";
 
 export default function WorldMap() {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // Retained for #17: deck.gl MapboxOverlay will need the instance.
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
+  // [token] is honest but build-inlined — Next replaces NEXT_PUBLIC_* at build
+  // time, so this effect runs once. If runtime token override ever lands
+  // (HANDOVER punt), the dep array is already correct.
   useEffect(() => {
     if (!token || !containerRef.current) return;
 

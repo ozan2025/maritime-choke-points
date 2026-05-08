@@ -8,10 +8,7 @@ import dynamic from "next/dynamic";
 const WorldMap = dynamic(() => import("./world-map"), {
   ssr: false,
   loading: () => (
-    <div
-      aria-label="Loading map"
-      style={{ position: "absolute", inset: 0, background: "#0b0b0b" }}
-    />
+    <div role="presentation" style={{ position: "absolute", inset: 0, background: "#0b0b0b" }} />
   ),
 });
 
