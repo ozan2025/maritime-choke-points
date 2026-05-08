@@ -1,5 +1,5 @@
 import { REGIONS, type RegionId, type VesselPositionEvent } from "@maritime/shared";
-import type { VesselSource, VesselUpdateHandler } from "./source.js";
+import type { VesselSource, VesselSourceHandlers, VesselUpdateHandler } from "./source.js";
 
 const TICK_INTERVAL_MS = 1000;
 
@@ -67,9 +67,13 @@ export class SyntheticSource implements VesselSource {
     }
   }
 
-  start(onUpdate: VesselUpdateHandler): void {
+  start(handlers: VesselSourceHandlers): void {
     if (this.timer) return;
-    this.timer = setInterval(() => this.tick(onUpdate), TICK_INTERVAL_MS);
+    // No `onStatic` channel — synthetic vessels carry their static fields
+    // (shipType) inline on every position event. The persistent `vessels`
+    // table is only populated from real ShipStaticData.
+    const onPosition = handlers.onPosition;
+    this.timer = setInterval(() => this.tick(onPosition), TICK_INTERVAL_MS);
   }
 
   stop(): void {
