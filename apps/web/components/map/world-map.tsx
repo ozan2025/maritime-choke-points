@@ -1,5 +1,6 @@
 "use client";
 
+import { TripsLayer } from "@deck.gl/geo-layers";
 import { ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { VesselPositionEvent } from "@maritime/shared";
@@ -7,6 +8,7 @@ import mapboxgl from "mapbox-gl";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { interpolateHeadsAtTime, type Head, type Trip } from "@/lib/scrubber/trips";
 import { useVesselsStore } from "@/lib/vessels-store";
 
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -24,6 +26,29 @@ const STYLE_URL = "mapbox://styles/mapbox/dark-v10";
 // silhouettes are M4 #11.
 const VESSEL_FILL: [number, number, number, number] = [244, 162, 88, 230];
 const VESSEL_STROKE: [number, number, number, number] = [255, 224, 189, 255];
+
+// Trail color matches the marker fill but more transparent — context, not
+// foreground. TripsLayer fades along trailLength toward fully transparent.
+const TRAIL_COLOR: [number, number, number] = [244, 162, 88];
+
+// Visible trail span in seconds. PRD §9 feature 2 specifies 30 min; the
+// 60-min query window above gives drag head-room without re-fetch.
+const TRAIL_LENGTH_SEC = 30 * 60;
+
+// Common shape across both modes' head-position layer data.
+interface VesselHead {
+  mmsi: number;
+  lon: number;
+  lat: number;
+}
+
+function vesselEventToHead(v: VesselPositionEvent): VesselHead {
+  return { mmsi: v.mmsi, lon: v.lon, lat: v.lat };
+}
+
+function headFromTrips(trips: readonly Trip[], scrubAt: Date): Head[] {
+  return interpolateHeadsAtTime(trips, scrubAt.getTime() / 1000);
+}
 
 export default function WorldMap() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -54,10 +79,6 @@ export default function WorldMap() {
     });
     mapRef.current = map;
 
-    // deck.gl overlay + ScatterplotLayer. The store subscription lives
-    // outside the React render path so position updates (~28 events/s
-    // from the synthetic source) do not drive React reconciliation —
-    // only Mapbox/deck.gl's rAF loop.
     const overlay = new MapboxOverlay({
       interleaved: false,
       layers: [],
@@ -65,12 +86,34 @@ export default function WorldMap() {
     });
 
     const rebuildLayers = (): void => {
-      const vessels = useVesselsStore.getState().vessels;
+      const state = useVesselsStore.getState();
+
+      // In live mode, head positions come from the live WS store — no lag,
+      // no interpolation. In scrubbed mode they are interpolated from the
+      // historical trips array at scrubAt. Same shape; same onClick.
+      const heads: VesselHead[] =
+        state.scrubberMode === "live"
+          ? Array.from(state.vessels.values()).map(vesselEventToHead)
+          : headFromTrips(state.trips, state.scrubAt);
+
       overlay.setProps({
         layers: [
-          new ScatterplotLayer<VesselPositionEvent>({
+          new TripsLayer<Trip>({
+            id: "trails",
+            data: state.trips,
+            getPath: (t) => t.path,
+            getTimestamps: (t) => t.timestamps,
+            getColor: TRAIL_COLOR,
+            opacity: 0.55,
+            widthMinPixels: 2,
+            jointRounded: true,
+            capRounded: true,
+            trailLength: TRAIL_LENGTH_SEC,
+            currentTime: state.scrubAt.getTime() / 1000,
+          }),
+          new ScatterplotLayer<VesselHead>({
             id: "vessels",
-            data: Array.from(vessels.values()),
+            data: heads,
             getPosition: (d) => [d.lon, d.lat],
             getRadius: 5,
             radiusUnits: "pixels",
@@ -81,7 +124,7 @@ export default function WorldMap() {
             getLineWidth: 1,
             pickable: true,
             onClick: (info) => {
-              const obj = info.object as VesselPositionEvent | undefined;
+              const obj = info.object as VesselHead | undefined;
               if (!obj) return;
               routerRef.current.replace(`?mmsi=${obj.mmsi}`, { scroll: false });
             },
@@ -93,12 +136,18 @@ export default function WorldMap() {
     let unsubscribe: (() => void) | null = null;
     const attachOverlay = (): void => {
       map.addControl(overlay);
-      // Initial paint with whatever's already in the store.
       rebuildLayers();
-      // Vanilla store subscribe — fires only when state actually changes
-      // (Zustand uses Object.is bail-out internally).
+      // Rebuild whenever any of the four layer-driving slices change.
+      // Object.is bail-out keeps no-op WS ticks from triggering work.
       unsubscribe = useVesselsStore.subscribe((state, prev) => {
-        if (state.vessels !== prev.vessels) rebuildLayers();
+        if (
+          state.vessels !== prev.vessels ||
+          state.trips !== prev.trips ||
+          state.scrubAt !== prev.scrubAt ||
+          state.scrubberMode !== prev.scrubberMode
+        ) {
+          rebuildLayers();
+        }
       });
     };
 

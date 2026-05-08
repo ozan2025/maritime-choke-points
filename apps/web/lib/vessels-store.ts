@@ -1,7 +1,10 @@
 import type { VesselPositionEvent } from "@maritime/shared";
 import { create } from "zustand";
 
+import type { Trip } from "@/lib/scrubber/trips";
+
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
+export type ScrubberMode = "live" | "scrubbed";
 
 export interface VesselsState {
   vessels: Map<number, VesselPositionEvent>;
@@ -9,6 +12,24 @@ export interface VesselsState {
   applySnapshot: (events: VesselPositionEvent[]) => void;
   applyPositionUpdate: (event: VesselPositionEvent) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
+
+  // Scrubber slice (M4 #27) ---------------------------------------------
+  /**
+   * `live` — head positions read from `vessels`, scrubAt tracks wall
+   * clock at 1 Hz, trails refresh every 60 s.
+   * `scrubbed` — head positions interpolated from `trips` at scrubAt,
+   * trails refresh only when the bucket-rounded scrubAt changes.
+   */
+  scrubberMode: ScrubberMode;
+  scrubAt: Date;
+  /** Per-vessel paths covering [scrubAt − 60 min, scrubAt]. */
+  trips: Trip[];
+  /** Bucket-rounded scrubAt of the currently-loaded `trips`. Lets the
+   * fetcher decide whether a new request is needed. */
+  tripsBucketAt: Date | null;
+  setScrubberMode: (mode: ScrubberMode) => void;
+  setScrubAt: (at: Date) => void;
+  setTrips: (trips: Trip[], bucketAt: Date) => void;
 }
 
 // Map keys are numeric mmsi — never stringify (per #17 issue notes).
@@ -30,4 +51,13 @@ export const useVesselsStore = create<VesselsState>()((set) => ({
       return { vessels: next };
     }),
   setConnectionStatus: (status) => set({ connectionStatus: status }),
+
+  // Scrubber slice ------------------------------------------------------
+  scrubberMode: "live",
+  scrubAt: new Date(),
+  trips: [],
+  tripsBucketAt: null,
+  setScrubberMode: (mode) => set({ scrubberMode: mode }),
+  setScrubAt: (at) => set({ scrubAt: at }),
+  setTrips: (trips, bucketAt) => set({ trips, tripsBucketAt: bucketAt }),
 }));

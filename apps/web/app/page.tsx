@@ -3,23 +3,28 @@ import { Suspense } from "react";
 import VesselStatusBadge from "@/components/map/vessel-status-badge";
 import VesselStreamProvider from "@/components/map/vessel-stream-provider";
 import WorldMap from "@/components/map/world-map-loader";
+import Scrubber from "@/components/scrubber/scrubber";
+import ScrubberProvider from "@/components/scrubber/scrubber-provider";
 import VesselStaticPanel from "@/components/sheet/vessel-static-panel";
 import { VesselStaticSkeleton } from "@/components/sheet/vessel-static-skeleton";
 import { VesselSheet } from "@/components/sheet/vessel-sheet";
 
 interface HomePageProps {
-  searchParams: Promise<{ mmsi?: string }>;
+  searchParams: Promise<{ mmsi?: string; t?: string }>;
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const { mmsi: mmsiParam } = await searchParams;
+  const { mmsi: mmsiParam, t: tParam } = await searchParams;
   const mmsi = parseMmsi(mmsiParam);
+  const initialScrubAt = parseScrubAt(tParam);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       <WorldMap />
       <VesselStreamProvider />
+      <ScrubberProvider initialScrubAt={initialScrubAt} />
       <VesselStatusBadge />
+      <Scrubber />
       {mmsi !== null && (
         <VesselSheet mmsi={mmsi}>
           <Suspense fallback={<VesselStaticSkeleton />}>
@@ -44,4 +49,19 @@ function parseMmsi(raw: string | undefined): number | null {
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 100_000_000 || n > 999_999_999) return null;
   return n;
+}
+
+/**
+ * Validates the `?t=` searchParam. Returns the ISO string back unchanged
+ * if it parses to a finite Date and is not too far in the future. The
+ * heavy validation (within the 48 h TTL window) lives in the route
+ * handler; here we only reject obvious junk so the client doesn't
+ * initialize scrubbed mode at NaN.
+ */
+function parseScrubAt(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const at = new Date(raw);
+  if (Number.isNaN(at.getTime())) return null;
+  if (at.getTime() > Date.now() + 60_000) return null;
+  return at.toISOString();
 }
