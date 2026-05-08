@@ -41,4 +41,12 @@ export interface PositionMessage {
   event: VesselPositionEvent;
 }
 
-export type ServerMessage = SnapshotMessage | PositionMessage;
+export interface ErrorMessage {
+  type: "error";
+  /** Stable machine-readable code: `"invalid_json"`, `"unknown_message_type"`, … */
+  code: string;
+  /** Human-readable detail intended for client logs, not end users. */
+  message: string;
+}
+
+export type ServerMessage = SnapshotMessage | PositionMessage | ErrorMessage;

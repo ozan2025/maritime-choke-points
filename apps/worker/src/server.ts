@@ -70,11 +70,21 @@ export class VesselServer {
       parsed = JSON.parse(raw);
     } catch {
       console.warn(`[worker] client ${client.id} sent non-JSON frame; ignoring`);
+      this.send(client.socket, {
+        type: "error",
+        code: "invalid_json",
+        message: "Frame was not valid JSON.",
+      });
       return;
     }
 
     if (!isClientMessageEnvelope(parsed)) {
       console.warn(`[worker] client ${client.id} sent unknown frame; ignoring`);
+      this.send(client.socket, {
+        type: "error",
+        code: "unknown_message_type",
+        message: "Frame did not match any known ClientMessage shape.",
+      });
       return;
     }
 
