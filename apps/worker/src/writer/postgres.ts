@@ -137,7 +137,7 @@ export class PostgresWriter {
       SELECT DISTINCT ON (r.mmsi, r.region)
         r.mmsi,
         r.region,
-        date_trunc('hour', r.observed_at),
+        ${prevHour},
         r.latitude,
         r.longitude,
         r.sog,

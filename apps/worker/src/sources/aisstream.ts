@@ -4,6 +4,7 @@ import type {
   VesselSource,
   VesselSourceHandlers,
   VesselStaticHandler,
+  VesselStaticUpdate,
   VesselUpdateHandler,
 } from "./source.js";
 
@@ -304,7 +305,7 @@ export class AisStreamSource implements VesselSource {
     if (this.onStatic) {
       // Each field is guarded individually — partial broadcasts are common
       // and a downstream coalesce-merge upsert keeps richer prior values.
-      const update: Parameters<VesselStaticHandler>[0] = {
+      const update: VesselStaticUpdate = {
         mmsi,
         observedAt: new Date().toISOString(),
       };
