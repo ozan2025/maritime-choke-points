@@ -101,6 +101,11 @@ A free Mapbox public token (the `pk.…` form) comes from
 [account.mapbox.com](https://account.mapbox.com). Domain-lock the token
 before deploying anywhere public.
 
+The web app also reads `DATABASE_URL` (server-side only — Server Components
+query the `vessels` table for the M3 #9 vessel-detail Sheet). Bring up the
+local Postgres before `pnpm --filter @maritime/web dev` or the static slot
+of the Sheet will fail at request time.
+
 Application code arrives across milestones M1–M4. See [`PRD.md`](./PRD.md) §10
 for the milestone breakdown and the [GitHub issues](https://github.com/ozan2025/maritime-choke-points/issues)
 for the next concrete unit of work.

@@ -4,6 +4,7 @@ import { ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { VesselPositionEvent } from "@maritime/shared";
 import mapboxgl from "mapbox-gl";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { useVesselsStore } from "@/lib/vessels-store";
@@ -27,6 +28,14 @@ const VESSEL_STROKE: [number, number, number, number] = [255, 224, 189, 255];
 export default function WorldMap() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const router = useRouter();
+  // Latest router ref so the deck.gl onClick captured on overlay
+  // construction can still navigate after re-renders without rebuilding
+  // the layers — keeps the click → searchParam round-trip cheap.
+  const routerRef = useRef(router);
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -49,7 +58,11 @@ export default function WorldMap() {
     // outside the React render path so position updates (~28 events/s
     // from the synthetic source) do not drive React reconciliation —
     // only Mapbox/deck.gl's rAF loop.
-    const overlay = new MapboxOverlay({ interleaved: false, layers: [] });
+    const overlay = new MapboxOverlay({
+      interleaved: false,
+      layers: [],
+      getCursor: ({ isHovering }) => (isHovering ? "pointer" : "grab"),
+    });
 
     const rebuildLayers = (): void => {
       const vessels = useVesselsStore.getState().vessels;
@@ -61,12 +74,21 @@ export default function WorldMap() {
             getPosition: (d) => [d.lon, d.lat],
             getRadius: 5,
             radiusUnits: "pixels",
+            // Hover hit area is larger than the visual marker — 5 px dots
+            // are hard to click. The fill/stroke radii stay at 5 px so the
+            // visual is unchanged.
+            radiusMinPixels: 5,
             getFillColor: VESSEL_FILL,
             getLineColor: VESSEL_STROKE,
             stroked: true,
             lineWidthUnits: "pixels",
             getLineWidth: 1,
-            pickable: false,
+            pickable: true,
+            onClick: (info) => {
+              const obj = info.object as VesselPositionEvent | undefined;
+              if (!obj) return;
+              routerRef.current.replace(`?mmsi=${obj.mmsi}`, { scroll: false });
+            },
           }),
         ],
       });
