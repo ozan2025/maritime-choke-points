@@ -1,9 +1,9 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
 
-import * as schema from "./schema.js";
+import * as schema from "./schema.ts";
 
-export * from "./schema.js";
+export * from "./schema.ts";
 export { schema };
 
 let pool: pg.Pool | undefined;
