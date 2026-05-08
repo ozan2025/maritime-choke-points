@@ -3,7 +3,7 @@ import path from "node:path";
 import { config } from "dotenv";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 
-import { getDb, getPool } from "./index.js";
+import { getDb, getPool } from "./index.ts";
 
 config({ path: path.join(import.meta.dirname, "../../../.env") });
 
