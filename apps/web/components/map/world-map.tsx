@@ -45,9 +45,10 @@ export default function WorldMap() {
     });
     mapRef.current = map;
 
-    // deck.gl overlay + IconLayer. The store subscription lives outside the
-    // React render path so 30 Hz position updates do not drive React
-    // reconciliation — only Mapbox/deck.gl's rAF loop.
+    // deck.gl overlay + ScatterplotLayer. The store subscription lives
+    // outside the React render path so position updates (~28 events/s
+    // from the synthetic source) do not drive React reconciliation —
+    // only Mapbox/deck.gl's rAF loop.
     const overlay = new MapboxOverlay({ interleaved: false, layers: [] });
 
     const rebuildLayers = (): void => {

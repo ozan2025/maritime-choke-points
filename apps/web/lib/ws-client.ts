@@ -50,9 +50,12 @@ export class WsClient {
     this.emitStatus("closed");
   }
 
-  /** Replaces the active subscription. Sent immediately if open; otherwise
-   *  applied on the next successful (re)connection. Resubscribe is a replace,
-   *  not a merge — matches the wire-format contract. */
+  /** Replaces the active subscription. If the socket is open, the new
+   *  SubscribeMessage is sent immediately. Otherwise the regions are
+   *  cached on `currentRegions` and the `open` handler resends them on
+   *  every (re)connection — there is no separate queue or retry path.
+   *  Resubscribe is a replace, not a merge: matches the wire-format
+   *  contract. */
   subscribe(regions: RegionId[]): void {
     this.currentRegions = [...regions];
     if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
@@ -61,7 +64,12 @@ export class WsClient {
   }
 
   private openSocket(): void {
-    this.emitStatus(this.backoffMs === INITIAL_BACKOFF_MS ? "connecting" : "reconnecting");
+    // On the first attempt (from connect()) emit "connecting"; on retries
+    // scheduleReconnect() has already emitted "reconnecting" before the
+    // timer fired, so don't emit it again here.
+    if (this.backoffMs === INITIAL_BACKOFF_MS) {
+      this.emitStatus("connecting");
+    }
 
     let socket: WebSocket;
     try {
