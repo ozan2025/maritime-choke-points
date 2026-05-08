@@ -241,8 +241,13 @@ export class AisStreamSource implements VesselSource {
     const region = this.regionForPosition(lat, lon);
     if (region === null) return;
 
-    const sog = numberOr(report.Sog, 0);
-    const cog = numberOr(report.Cog, 0);
+    // Fall back to the AIS "unknown" sentinels (Sog 102.3 kn, Cog 360°)
+    // when the upstream omits the field. This collapses "AIS sent
+    // sentinel" and "AISStream omitted the field" into the same wire
+    // value so downstream renderers can detect "unknown" with a single
+    // check, and matches the locked pass-through policy.
+    const sog = numberOr(report.Sog, 102.3);
+    const cog = numberOr(report.Cog, 360);
     const event: VesselPositionEvent = {
       mmsi,
       lat,
@@ -272,7 +277,12 @@ export class AisStreamSource implements VesselSource {
   private handleShipStaticData(msg: AisShipStaticData): void {
     const mmsi = msg.MetaData?.MMSI;
     const shipType = msg.Message?.ShipStaticData?.Type;
-    if (typeof mmsi !== "number" || typeof shipType !== "number" || !Number.isFinite(shipType)) {
+    if (
+      typeof mmsi !== "number" ||
+      !Number.isFinite(mmsi) ||
+      typeof shipType !== "number" ||
+      !Number.isFinite(shipType)
+    ) {
       return;
     }
     this.shipTypeByMmsi.set(mmsi, shipType);
