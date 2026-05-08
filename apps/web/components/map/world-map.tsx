@@ -74,10 +74,6 @@ export default function WorldMap() {
             getPosition: (d) => [d.lon, d.lat],
             getRadius: 5,
             radiusUnits: "pixels",
-            // Hover hit area is larger than the visual marker — 5 px dots
-            // are hard to click. The fill/stroke radii stay at 5 px so the
-            // visual is unchanged.
-            radiusMinPixels: 5,
             getFillColor: VESSEL_FILL,
             getLineColor: VESSEL_STROKE,
             stroked: true,
