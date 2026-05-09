@@ -34,6 +34,8 @@ function snapshot(): LiveCounters {
     hormuzApproaches: 0,
     babElMandeb: 0,
     suez: 0,
+    bosphorus: 0,
+    panama: 0,
   };
   let lastObservedAtMs: number | null = null;
 

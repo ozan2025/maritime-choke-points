@@ -1,10 +1,18 @@
-export type RegionId = "malaccaSingapore" | "hormuzApproaches" | "babElMandeb" | "suez";
+export type RegionId =
+  | "malaccaSingapore"
+  | "hormuzApproaches"
+  | "babElMandeb"
+  | "suez"
+  | "bosphorus"
+  | "panama";
 
 export const REGION_IDS: readonly RegionId[] = [
   "malaccaSingapore",
   "hormuzApproaches",
   "babElMandeb",
   "suez",
+  "bosphorus",
+  "panama",
 ] as const;
 
 export interface RegionBbox {
@@ -19,6 +27,10 @@ export const REGIONS: Readonly<Record<RegionId, RegionBbox>> = {
   hormuzApproaches: { sw: [22.0, 50.0], ne: [28.0, 60.0] },
   babElMandeb: { sw: [11.5, 42.5], ne: [14.0, 44.5] },
   suez: { sw: [29.5, 32.0], ne: [31.7, 33.0] },
+  // Stretch regions added in M5 #38 — both have strong terrestrial AIS
+  // coverage so the live counters fill quickly. Bboxes match PRD §8.
+  bosphorus: { sw: [40.9, 28.8], ne: [41.3, 29.3] },
+  panama: { sw: [8.8, -80.0], ne: [9.5, -79.4] },
 };
 
 export function isRegionId(value: unknown): value is RegionId {

@@ -14,13 +14,17 @@ const BROADCAST_EVERY_N_TICKS = 3;
 /**
  * Seed counts that mirror the real-world AIS sparsity validated 2026-05-06
  * (PRD §2). Hormuz is closed; Bab el-Mandeb is AIS-dark; Suez is sparse;
- * Malacca/Singapore is the protagonist.
+ * Malacca/Singapore is the protagonist. Bosphorus and Panama (M5 #38)
+ * have strong terrestrial coverage and busy traffic — moderate counts so
+ * the synthetic-mode tiles read non-zero.
  */
 const SEED_COUNTS: Readonly<Record<RegionId, number>> = {
   malaccaSingapore: 80,
   suez: 6,
   hormuzApproaches: 0,
   babElMandeb: 0,
+  bosphorus: 18,
+  panama: 12,
 };
 
 /** Representative spread of AIS ship-type codes (ITU-R M.1371): 70 cargo,
