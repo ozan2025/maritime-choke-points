@@ -1,14 +1,23 @@
 "use client";
 
+import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import { TripsLayer } from "@deck.gl/geo-layers";
 import { IconLayer } from "@deck.gl/layers";
+import type { Layer } from "@deck.gl/core";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { VesselPositionEvent } from "@maritime/shared";
 import mapboxgl from "mapbox-gl";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-import { iconForShipType, SHIP_ICON_MAPPING } from "@/lib/ais/ship-icons";
+import {
+  HEATMAP_COLOR_RANGES,
+  HEATMAP_GROUPS,
+  heatmapGroupForShipType,
+  iconForShipType,
+  SHIP_ICON_MAPPING,
+  type HeatmapGroup,
+} from "@/lib/ais/ship-icons";
 import {
   extendTripsWithLive,
   interpolateHeadsAtTime,
@@ -50,6 +59,15 @@ const TRAIL_LENGTH_SEC = 30 * 60;
 // TripsLayer sits underneath the heads.
 const ICON_SIZE_BASE = 18;
 const ICON_SIZE_SELECTED = 28;
+
+// HeatmapLayer parameters. `radiusPixels` is the kernel half-width;
+// 40 px gives blooms that read at zoom 9 without losing the corridor
+// shape. `intensity: 1` + `threshold: 0.05` keeps the empty water dark.
+// Aggregation is per-cell weight; weight = 1 per vessel since we want
+// raw count density, not a SOG-weighted flow.
+const HEATMAP_RADIUS_PX = 40;
+const HEATMAP_INTENSITY = 1;
+const HEATMAP_THRESHOLD = 0.05;
 
 // Common shape across both modes' head-position layer data. `shipType`
 // drives `getIcon` so each vessel renders its bucket-appropriate
@@ -169,57 +187,67 @@ export default function WorldMap() {
           ? extendTripsWithLive(state.trips, buildLiveObservationMap(state.vessels))
           : state.trips;
 
-      overlay.setProps({
-        layers: [
-          new TripsLayer<Trip>({
-            id: "trails",
-            data: tripsForLayer,
-            getPath: (t) => t.path,
-            getTimestamps: (t) => t.timestamps,
-            getColor: TRAIL_COLOR,
-            opacity: 0.55,
-            widthMinPixels: 2,
-            jointRounded: true,
-            capRounded: true,
-            trailLength: TRAIL_LENGTH_SEC,
-            currentTime: state.scrubAt.getTime() / 1000,
-          }),
-          new IconLayer<VesselHead>({
-            id: "vessels",
-            data: heads,
-            // Dynamic icon loading: each accessor result is the full
-            // descriptor (`{ url, width, height, mask }`). The same
-            // object reference is returned for every vessel of the same
-            // bucket so deck.gl can de-dupe into a runtime atlas.
-            getIcon: (d) => SHIP_ICON_MAPPING[iconForShipType(d.shipType)],
-            getPosition: (d) => [d.lon, d.lat],
-            getSize: (d) => (d.mmsi === selectedMmsi ? ICON_SIZE_SELECTED : ICON_SIZE_BASE),
-            sizeUnits: "pixels",
-            getColor: (d) => (d.mmsi === selectedMmsi ? VESSEL_FILL_HIGHLIGHT : VESSEL_FILL),
-            // Selection-driven accessors are not in the data array, so
-            // tell deck.gl to re-evaluate them when the selected MMSI
-            // changes. (selectedMmsi captures via closure on each
-            // rebuild, so the trigger value cycling on change is enough
-            // to invalidate.)
-            updateTriggers: {
-              getSize: selectedMmsi,
-              getColor: selectedMmsi,
-            },
-            pickable: true,
-            // Pixels with alpha below this threshold are excluded from
-            // the picking pass — keeps the corners of the silhouette's
-            // bounding box from registering clicks where there's no
-            // visible vessel. The icon descriptor's default anchor is
-            // already center, so positional alignment needs no opt-in.
-            alphaCutoff: 0.05,
-            onClick: (info) => {
-              const obj = info.object as VesselHead | undefined;
-              if (!obj) return;
-              routerRef.current.replace(`?mmsi=${obj.mmsi}`, { scroll: false });
-            },
-          }),
-        ],
+      const trails = new TripsLayer<Trip>({
+        id: "trails",
+        data: tripsForLayer,
+        getPath: (t) => t.path,
+        getTimestamps: (t) => t.timestamps,
+        getColor: TRAIL_COLOR,
+        opacity: 0.55,
+        widthMinPixels: 2,
+        jointRounded: true,
+        capRounded: true,
+        trailLength: TRAIL_LENGTH_SEC,
+        currentTime: state.scrubAt.getTime() / 1000,
       });
+
+      // Heatmap mode: stack one HeatmapLayer per ship-type group. Each
+      // layer is filtered to its bucket's vessels so the colors don't
+      // mix into a muddy mid-tone — the eye reads three separate
+      // density blooms (TANK/CARGO/PASS) in their brand colors.
+      // `fishing` + `other` are dropped via the null return from
+      // `heatmapGroupForShipType` — too noisy for the three-color story.
+      // IconLayer is omitted in this mode; clicks fall through to map
+      // pan/zoom. The ⌘K palette becomes the only way to select.
+      const layers: Layer[] =
+        state.layerMode === "heatmap"
+          ? [trails, ...buildHeatmapLayers(heads)]
+          : [
+              trails,
+              new IconLayer<VesselHead>({
+                id: "vessels",
+                data: heads,
+                // Dynamic icon loading: each accessor result is the full
+                // descriptor (`{ url, width, height, mask }`). The same
+                // object reference is returned for every vessel of the
+                // same bucket so deck.gl can de-dupe into a runtime atlas.
+                getIcon: (d) => SHIP_ICON_MAPPING[iconForShipType(d.shipType)],
+                getPosition: (d) => [d.lon, d.lat],
+                getSize: (d) => (d.mmsi === selectedMmsi ? ICON_SIZE_SELECTED : ICON_SIZE_BASE),
+                sizeUnits: "pixels",
+                getColor: (d) => (d.mmsi === selectedMmsi ? VESSEL_FILL_HIGHLIGHT : VESSEL_FILL),
+                // Selection-driven accessors are not in the data array,
+                // so tell deck.gl to re-evaluate them when the selected
+                // MMSI changes.
+                updateTriggers: {
+                  getSize: selectedMmsi,
+                  getColor: selectedMmsi,
+                },
+                pickable: true,
+                // Pixels with alpha below this threshold are excluded
+                // from the picking pass — keeps the corners of the
+                // silhouette's bounding box from registering clicks
+                // where there's no visible vessel.
+                alphaCutoff: 0.05,
+                onClick: (info) => {
+                  const obj = info.object as VesselHead | undefined;
+                  if (!obj) return;
+                  routerRef.current.replace(`?mmsi=${obj.mmsi}`, { scroll: false });
+                },
+              }),
+            ];
+
+      overlay.setProps({ layers });
     };
 
     let unsubscribe: (() => void) | null = null;
@@ -234,7 +262,8 @@ export default function WorldMap() {
           state.trips !== prev.trips ||
           state.scrubAt !== prev.scrubAt ||
           state.scrubberMode !== prev.scrubberMode ||
-          state.selectedMmsi !== prev.selectedMmsi
+          state.selectedMmsi !== prev.selectedMmsi ||
+          state.layerMode !== prev.layerMode
         ) {
           rebuildLayers();
         }
@@ -264,6 +293,41 @@ export default function WorldMap() {
   }
 
   return <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />;
+}
+
+/**
+ * Splits the heads list into per-group buckets and builds one
+ * HeatmapLayer per group. Each layer renders only its bucket's vessels
+ * (no `getWeight` filter) so the kernel aggregation is honest — a
+ * shared HeatmapLayer with conditional weight would still aggregate
+ * adjacent foreign-bucket vessels into the kernel and skew the
+ * gradient.
+ */
+function buildHeatmapLayers(heads: readonly VesselHead[]): HeatmapLayer<VesselHead>[] {
+  const grouped: Record<HeatmapGroup, VesselHead[]> = {
+    tank: [],
+    cargo: [],
+    pass: [],
+  };
+  for (const h of heads) {
+    const g = heatmapGroupForShipType(h.shipType);
+    if (g !== null) grouped[g].push(h);
+  }
+
+  return HEATMAP_GROUPS.map(
+    (group) =>
+      new HeatmapLayer<VesselHead>({
+        id: `heatmap-${group}`,
+        data: grouped[group],
+        getPosition: (d) => [d.lon, d.lat],
+        getWeight: 1,
+        colorRange: HEATMAP_COLOR_RANGES[group],
+        radiusPixels: HEATMAP_RADIUS_PX,
+        intensity: HEATMAP_INTENSITY,
+        threshold: HEATMAP_THRESHOLD,
+        pickable: false,
+      }),
+  );
 }
 
 function MissingTokenNotice() {

@@ -76,3 +76,57 @@ export const SHIP_ICON_MAPPING: Record<
   fishing: { url: "/icons/ships/fishing.png", width: 64, height: 64, mask: true },
   other: { url: "/icons/ships/other.png", width: 64, height: 64, mask: true },
 };
+
+/**
+ * Coarser bucketing used by the ship-type heatmap (M4 #32). Collapses
+ * the seven render-bucket distinctions into three categories the
+ * HeatmapLayer can render as cleanly-separable color blooms:
+ *
+ *  - `tank` ← tanker + lng (oil + LNG carriers, the dominant Malacca cargo)
+ *  - `cargo` ← cargo + bulker (containers + dry bulk)
+ *  - `pass` ← passenger
+ *
+ * `fishing` and `other` return null and are intentionally dropped from
+ * the heatmap — the visual goal is "where do major cargo classes
+ * cluster," and adding the noise of fishing fleets and tugs muddies the
+ * three-color story without adding signal.
+ */
+export type HeatmapGroup = "tank" | "cargo" | "pass";
+export const HEATMAP_GROUPS = ["tank", "cargo", "pass"] as const satisfies readonly HeatmapGroup[];
+
+export function heatmapGroupForShipType(code: number | undefined): HeatmapGroup | null {
+  const bucket = iconForShipType(code);
+  if (bucket === "tanker" || bucket === "lng") return "tank";
+  if (bucket === "cargo" || bucket === "bulker") return "cargo";
+  if (bucket === "passenger") return "pass";
+  return null;
+}
+
+/**
+ * Color ramps for each heatmap group. Each is a 6-stop gradient from
+ * fully-transparent black (cool/empty) to fully-opaque brand color
+ * (peak density). deck.gl's `HeatmapLayer.colorRange` interpolates
+ * between these stops based on per-cell aggregated weight.
+ *
+ * The brand peaks come from PRD §12 (`#F4A258` for active vessel) and
+ * adjacent picks chosen to remain legible against the dark satellite
+ * basemap and against each other when blended:
+ *  - tank  → brand orange `#F4A258`
+ *  - cargo → cool cyan `#5DA9E9`
+ *  - pass  → warm green `#9DCB6A`
+ */
+type RGBA = [number, number, number, number];
+const ramp = (r: number, g: number, b: number): RGBA[] => [
+  [r, g, b, 0],
+  [r, g, b, 60],
+  [r, g, b, 120],
+  [r, g, b, 170],
+  [r, g, b, 215],
+  [r, g, b, 255],
+];
+
+export const HEATMAP_COLOR_RANGES: Record<HeatmapGroup, RGBA[]> = {
+  tank: ramp(244, 162, 88),
+  cargo: ramp(93, 169, 233),
+  pass: ramp(157, 203, 106),
+};
