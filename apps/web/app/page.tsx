@@ -1,6 +1,9 @@
 import { Suspense } from "react";
 
-import VesselStatusBadge from "@/components/map/vessel-status-badge";
+import { ChokePointsRow } from "@/components/hud/choke-points-row";
+import { SelectionSync } from "@/components/hud/selection-sync";
+import { SystemPill } from "@/components/hud/system-pill";
+import { VesselsCounter } from "@/components/hud/vessels-counter";
 import VesselStreamProvider from "@/components/map/vessel-stream-provider";
 import WorldMap from "@/components/map/world-map-loader";
 import Scrubber from "@/components/scrubber/scrubber";
@@ -23,7 +26,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <WorldMap />
       <VesselStreamProvider />
       <ScrubberProvider initialScrubAt={initialScrubAt} />
-      <VesselStatusBadge />
+      <SelectionSync mmsi={mmsi} />
+      <SystemPill />
+      <VesselsCounter />
+      <ChokePointsRow />
       <Scrubber />
       {mmsi !== null && (
         <VesselSheet mmsi={mmsi}>

@@ -1,0 +1,120 @@
+"use client";
+
+import type { RegionId } from "@maritime/shared";
+import { motion } from "framer-motion";
+import { useState } from "react";
+
+import { ChokePointDialog } from "@/components/hud/choke-point-dialog";
+import { useLiveCounters } from "@/lib/hud/use-live-counters";
+import { cn } from "@/lib/utils";
+
+const ACTIVE = "#F4A258";
+
+interface TileSpec {
+  region: RegionId;
+  label: string;
+}
+
+// Order matches PRD §9 feature 5's table layout. Malacca first as the
+// protagonist; the three coverage-gap regions follow.
+const TILES: readonly TileSpec[] = [
+  { region: "malaccaSingapore", label: "MALACCA" },
+  { region: "suez", label: "SUEZ" },
+  { region: "babElMandeb", label: "BAB el-MANDEB" },
+  { region: "hormuzApproaches", label: "HORMUZ" },
+];
+
+interface ChokePointTileProps {
+  tile: TileSpec;
+  count: number;
+  active: boolean;
+  index: number;
+  onClick: () => void;
+}
+
+function ChokePointTile({ tile, count, active, index, onClick }: ChokePointTileProps) {
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.4,
+        ease: [0.22, 1, 0.36, 1],
+        delay: 0.06 * index,
+      }}
+      whileHover={{ y: -2 }}
+      className={cn(
+        "group pointer-events-auto relative w-[140px] cursor-pointer overflow-hidden",
+        "rounded-lg border border-white/[0.06] bg-[rgba(8,12,22,0.55)]",
+        "backdrop-blur-md backdrop-saturate-150",
+        "shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.04)]",
+        "px-3 py-2.5 text-left transition-shadow",
+        "hover:shadow-[0_8px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]",
+        active && "ring-1 ring-[#F4A258]/40",
+      )}
+      aria-label={`${tile.label} — ${count} vessels — open context`}
+    >
+      <div
+        className="font-mono text-[9px] uppercase tracking-[0.2em]"
+        style={{ color: active ? ACTIVE : "rgba(255,255,255,0.55)" }}
+      >
+        {tile.label}
+      </div>
+      <div className="mt-1 font-sans text-[22px] leading-none font-medium text-white tabular-nums">
+        {count.toLocaleString()}
+      </div>
+      <span
+        aria-hidden
+        className="absolute right-3 bottom-2 left-3 h-px origin-left scale-x-0 rounded-full transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-x-100"
+        style={{ backgroundColor: ACTIVE }}
+      />
+    </motion.button>
+  );
+}
+
+/**
+ * Bottom row of glass tiles — one per critical choke point. Sits above
+ * the scrubber. Click any tile to open a context dialog with the
+ * verbatim PRD §9 feature 5 explanation for that region.
+ *
+ * Why hardcoded zeros for Suez / Bab el-Mandeb / Hormuz: PRD §2
+ * validation evidence (2026-05-06) — AISStream returns 0 for those
+ * bboxes. The browser also only subscribes to `malaccaSingapore`
+ * today; expanding the subscription is a follow-up if coverage shifts.
+ */
+export function ChokePointsRow() {
+  const { byRegion } = useLiveCounters();
+  const [openRegion, setOpenRegion] = useState<RegionId | null>(null);
+
+  return (
+    <>
+      <div
+        // Sits just above the bottom-strip scrubber (which has its own
+        // pointer-events surface). pointer-events-none on the wrapper +
+        // pointer-events-auto on each tile keeps the gaps between tiles
+        // from blocking map drag.
+        className="pointer-events-none absolute right-0 bottom-[88px] left-0 z-10 flex justify-center gap-3 px-6"
+      >
+        {TILES.map((tile, i) => (
+          <ChokePointTile
+            key={tile.region}
+            tile={tile}
+            count={byRegion[tile.region]}
+            active={tile.region === "malaccaSingapore"}
+            index={i}
+            onClick={() => setOpenRegion(tile.region)}
+          />
+        ))}
+      </div>
+      <ChokePointDialog
+        region={openRegion}
+        count={openRegion ? byRegion[openRegion] : 0}
+        onOpenChange={(open) => {
+          if (!open) setOpenRegion(null);
+        }}
+      />
+    </>
+  );
+}
