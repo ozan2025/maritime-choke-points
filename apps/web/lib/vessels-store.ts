@@ -5,6 +5,7 @@ import type { Trip } from "@/lib/scrubber/trips";
 
 export type ConnectionStatus = "connecting" | "open" | "reconnecting" | "closed";
 export type ScrubberMode = "live" | "scrubbed";
+export type LayerMode = "icons" | "heatmap";
 
 export interface VesselsState {
   vessels: Map<number, VesselPositionEvent>;
@@ -38,6 +39,18 @@ export interface VesselsState {
    * Sheet share one source of truth. */
   selectedMmsi: number | null;
   setSelectedMmsi: (mmsi: number | null) => void;
+
+  // Layer-mode + palette slices (M4 #32) -------------------------------
+  /** `icons` shows the IconLayer; `heatmap` swaps in stacked
+   *  HeatmapLayers (one per ship-type bucket). TripsLayer renders in
+   *  both modes. URL-canonical via `?layer=heat`. */
+  layerMode: LayerMode;
+  setLayerMode: (mode: LayerMode) => void;
+  /** Open state for the ⌘K command palette. Lifted into the store so the
+   *  global hotkey handler, the trigger pill, and the dialog itself
+   *  share one source — no prop-drilling through `app/page.tsx`. */
+  paletteOpen: boolean;
+  setPaletteOpen: (open: boolean) => void;
 }
 
 // Map keys are numeric mmsi — never stringify (per #17 issue notes).
@@ -72,4 +85,10 @@ export const useVesselsStore = create<VesselsState>()((set) => ({
   // Selection slice -----------------------------------------------------
   selectedMmsi: null,
   setSelectedMmsi: (mmsi) => set({ selectedMmsi: mmsi }),
+
+  // Layer-mode + palette slices ----------------------------------------
+  layerMode: "icons",
+  setLayerMode: (mode) => set({ layerMode: mode }),
+  paletteOpen: false,
+  setPaletteOpen: (open) => set({ paletteOpen: open }),
 }));

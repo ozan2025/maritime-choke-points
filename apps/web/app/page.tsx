@@ -1,25 +1,31 @@
 import { Suspense } from "react";
 
 import { ChokePointsRow } from "@/components/hud/choke-points-row";
+import { LayerModeSync } from "@/components/hud/layer-mode-sync";
+import { LayerModeToggle } from "@/components/hud/layer-mode-toggle";
 import { SelectionSync } from "@/components/hud/selection-sync";
 import { SystemPill } from "@/components/hud/system-pill";
 import { VesselsCounter } from "@/components/hud/vessels-counter";
 import VesselStreamProvider from "@/components/map/vessel-stream-provider";
 import WorldMap from "@/components/map/world-map-loader";
+import { PaletteTrigger } from "@/components/palette/palette-trigger";
+import { VesselPalette } from "@/components/palette/vessel-palette";
 import Scrubber from "@/components/scrubber/scrubber";
 import ScrubberProvider from "@/components/scrubber/scrubber-provider";
 import VesselStaticPanel from "@/components/sheet/vessel-static-panel";
 import { VesselStaticSkeleton } from "@/components/sheet/vessel-static-skeleton";
 import { VesselSheet } from "@/components/sheet/vessel-sheet";
+import type { LayerMode } from "@/lib/vessels-store";
 
 interface HomePageProps {
-  searchParams: Promise<{ mmsi?: string; t?: string }>;
+  searchParams: Promise<{ mmsi?: string; t?: string; layer?: string }>;
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const { mmsi: mmsiParam, t: tParam } = await searchParams;
+  const { mmsi: mmsiParam, t: tParam, layer: layerParam } = await searchParams;
   const mmsi = parseMmsi(mmsiParam);
   const initialScrubAt = parseScrubAt(tParam);
+  const layerMode = parseLayer(layerParam);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
@@ -27,10 +33,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <VesselStreamProvider />
       <ScrubberProvider initialScrubAt={initialScrubAt} />
       <SelectionSync mmsi={mmsi} />
+      <LayerModeSync layerMode={layerMode} />
       <SystemPill />
+      <PaletteTrigger />
+      <LayerModeToggle />
       <VesselsCounter />
       <ChokePointsRow />
       <Scrubber />
+      <VesselPalette />
       {mmsi !== null && (
         <VesselSheet mmsi={mmsi}>
           <Suspense fallback={<VesselStaticSkeleton />}>
@@ -70,4 +80,13 @@ function parseScrubAt(raw: string | undefined): string | null {
   if (Number.isNaN(at.getTime())) return null;
   if (at.getTime() > Date.now() + 60_000) return null;
   return at.toISOString();
+}
+
+/**
+ * `?layer=heat` opts into the heatmap mode; anything else (missing,
+ * malformed) falls back to icons. The URL value is short (`heat`) so
+ * the canonical share-link doesn't bloat with a multi-character mode.
+ */
+function parseLayer(raw: string | undefined): LayerMode {
+  return raw === "heat" ? "heatmap" : "icons";
 }

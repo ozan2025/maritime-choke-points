@@ -134,3 +134,27 @@ export function mmsiToFlag(mmsi: number): string | null {
   if (mid < 200 || mid > 799) return null;
   return MID_TO_FLAG[mid] ?? null;
 }
+
+/**
+ * Returns the MID integers whose flag-state name contains `needle`
+ * (case-insensitive). Powers the ⌘K palette's flag-name search — the
+ * route handler maps each returned MID into a 3-digit MMSI prefix and
+ * ORs those prefixes into the SQL predicate.
+ *
+ * Coverage is intentionally partial (see module header). A search like
+ * "Singapore" hits 4 MIDs, "Brazil" hits 1, "France" hits 3, but a
+ * search like "Estonia" matches nothing because Estonia is not seeded
+ * here yet — the empty result is honest, not a bug.
+ */
+export function flagsContaining(needle: string): number[] {
+  const trimmed = needle.trim();
+  if (trimmed.length === 0) return [];
+  const lower = trimmed.toLowerCase();
+  const out: number[] = [];
+  for (const [midStr, name] of Object.entries(MID_TO_FLAG)) {
+    if (name.toLowerCase().includes(lower)) {
+      out.push(Number(midStr));
+    }
+  }
+  return out;
+}
