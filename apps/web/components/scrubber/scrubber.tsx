@@ -68,13 +68,12 @@ export default function Scrubber() {
     const v = values[0];
     if (v === undefined) return;
     const offSec = WINDOW_SEC - v;
-    const next = new Date(nowMs - offSec * 1000);
     if (offSec <= LIVE_SNAP_SEC) {
       setScrubberMode("live");
       setScrubAt(new Date(nowMs));
     } else {
       setScrubberMode("scrubbed");
-      setScrubAt(next);
+      setScrubAt(new Date(nowMs - offSec * 1000));
     }
   };
 

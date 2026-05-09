@@ -8,7 +8,13 @@ import mapboxgl from "mapbox-gl";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-import { interpolateHeadsAtTime, type Head, type Trip } from "@/lib/scrubber/trips";
+import {
+  extendTripsWithLive,
+  interpolateHeadsAtTime,
+  type Head,
+  type LiveObservation,
+  type Trip,
+} from "@/lib/scrubber/trips";
 import { useVesselsStore } from "@/lib/vessels-store";
 
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -48,6 +54,23 @@ function vesselEventToHead(v: VesselPositionEvent): VesselHead {
 
 function headFromTrips(trips: readonly Trip[], scrubAt: Date): Head[] {
   return interpolateHeadsAtTime(trips, scrubAt.getTime() / 1000);
+}
+
+/**
+ * Project the live-store snapshot into the shape `extendTripsWithLive`
+ * expects. ISO-string timestamps become epoch seconds at the boundary
+ * so the trip-tail comparison is plain number math.
+ */
+function buildLiveObservationMap(
+  vessels: ReadonlyMap<number, VesselPositionEvent>,
+): Map<number, LiveObservation> {
+  const out = new Map<number, LiveObservation>();
+  for (const v of vessels.values()) {
+    const tMs = Date.parse(v.observedAt);
+    if (Number.isNaN(tMs)) continue;
+    out.set(v.mmsi, { mmsi: v.mmsi, lon: v.lon, lat: v.lat, t: tMs / 1000 });
+  }
+  return out;
 }
 
 export default function WorldMap() {
@@ -93,14 +116,22 @@ export default function WorldMap() {
       // historical trips array at scrubAt. Same shape; same onClick.
       const heads: VesselHead[] =
         state.scrubberMode === "live"
-          ? Array.from(state.vessels.values()).map(vesselEventToHead)
+          ? Array.from(state.vessels.values(), vesselEventToHead)
           : headFromTrips(state.trips, state.scrubAt);
+
+      // In live mode, extend each trip's tail with the freshest WS
+      // observation. Without this the trail can lag the head by up to
+      // one bucket boundary (60 s) — visibly so for moving vessels.
+      const tripsForLayer: readonly Trip[] =
+        state.scrubberMode === "live"
+          ? extendTripsWithLive(state.trips, buildLiveObservationMap(state.vessels))
+          : state.trips;
 
       overlay.setProps({
         layers: [
           new TripsLayer<Trip>({
             id: "trails",
-            data: state.trips,
+            data: tripsForLayer,
             getPath: (t) => t.path,
             getTimestamps: (t) => t.timestamps,
             getColor: TRAIL_COLOR,

@@ -4,13 +4,7 @@
  * reusable across the live-mode and scrubbed-mode code paths.
  */
 
-export interface HistoryRow {
-  mmsi: number;
-  lat: number;
-  lon: number;
-  /** Unix epoch seconds. Wire-format already converted in the route. */
-  t: number;
-}
+import type { HistoryRow } from "@maritime/shared";
 
 export interface Trip {
   mmsi: number;
@@ -114,4 +108,53 @@ export function interpolateHeadsAtTime(trips: readonly Trip[], tSec: number): He
 export function bucketRound(date: Date, bucketSec: number): Date {
   const bucketMs = bucketSec * 1000;
   return new Date(Math.floor(date.getTime() / bucketMs) * bucketMs);
+}
+
+/**
+ * Live observation already on hand from the WS firehose. Same shape
+ * adapter the `extendTripsWithLive` callers all use — kept narrow so
+ * this helper is independent of `VesselPositionEvent`.
+ */
+export interface LiveObservation {
+  mmsi: number;
+  lon: number;
+  lat: number;
+  /** Unix epoch seconds. */
+  t: number;
+}
+
+/**
+ * In live mode the bucket-fetched trips lag by up to one bucket boundary
+ * (60 s) behind the WS firehose, so the trail tail sits visibly behind
+ * the live head marker for moving vessels. Extend each matching trip's
+ * tail with the freshest WS observation when it post-dates the trip's
+ * last sample. Vessels with no historical trip are skipped — a single
+ * point would render as a vanishing dot, not a useful trail.
+ *
+ * Allocates one new Trip per vessel that received a fresh observation.
+ * Trips without a matching live update are returned as-is, so deck.gl's
+ * shallow data diff still bails out on the unchanged ones.
+ */
+export function extendTripsWithLive(
+  trips: readonly Trip[],
+  live: ReadonlyMap<number, LiveObservation>,
+): Trip[] {
+  if (live.size === 0) return trips as Trip[];
+  const out: Trip[] = new Array(trips.length);
+  for (let i = 0; i < trips.length; i++) {
+    const trip = trips[i];
+    if (!trip) continue;
+    const obs = live.get(trip.mmsi);
+    const lastT = trip.timestamps[trip.timestamps.length - 1];
+    if (!obs || lastT === undefined || obs.t <= lastT) {
+      out[i] = trip;
+      continue;
+    }
+    out[i] = {
+      mmsi: trip.mmsi,
+      path: [...trip.path, [obs.lon, obs.lat]],
+      timestamps: [...trip.timestamps, obs.t],
+    };
+  }
+  return out;
 }

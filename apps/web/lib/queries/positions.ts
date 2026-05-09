@@ -4,7 +4,13 @@ import { getDb, vesselPositionsRecent } from "@maritime/db";
 import type { RegionId } from "@maritime/shared";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 
-export interface HistoryRow {
+/**
+ * DB-shape row returned by `getPositionHistory`. Distinct from the wire
+ * `HistoryRow` in `@maritime/shared` — that one carries `t: number`
+ * (epoch seconds) for the JSON wire; this one carries `observedAt: Date`
+ * straight from Drizzle. The route handler converts at the boundary.
+ */
+export interface HistoryDbRow {
   mmsi: number;
   lat: number;
   lon: number;
@@ -22,7 +28,7 @@ export async function getPositionHistory(
   region: RegionId,
   windowStart: Date,
   windowEnd: Date,
-): Promise<HistoryRow[]> {
+): Promise<HistoryDbRow[]> {
   const db = getDb();
   return db
     .select({

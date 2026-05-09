@@ -1,4 +1,4 @@
-import { isRegionId } from "@maritime/shared";
+import { isRegionId, type HistoryResponseBody } from "@maritime/shared";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getPositionHistory } from "@/lib/queries/positions";
@@ -17,13 +17,6 @@ const TTL_GUARD_MS = 48 * 60 * 60 * 1000;
 
 // Tolerate a minute of clock skew between client and server.
 const FUTURE_SKEW_MS = 60 * 1000;
-
-interface HistoryResponse {
-  region: string;
-  windowStart: string;
-  windowEnd: string;
-  rows: { mmsi: number; lat: number; lon: number; t: number }[];
-}
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
@@ -59,7 +52,7 @@ export async function GET(req: NextRequest) {
     t: Math.floor(r.observedAt.getTime() / 1000),
   }));
 
-  const body: HistoryResponse = {
+  const body: HistoryResponseBody = {
     region,
     windowStart: windowStart.toISOString(),
     windowEnd: bucket.toISOString(),

@@ -1,9 +1,9 @@
 "use client";
 
-import type { RegionId } from "@maritime/shared";
+import type { HistoryResponseBody, RegionId } from "@maritime/shared";
 import { useEffect, useRef } from "react";
 
-import { bucketRound, groupRowsIntoTrips, type HistoryRow } from "@/lib/scrubber/trips";
+import { bucketRound, groupRowsIntoTrips } from "@/lib/scrubber/trips";
 import { useVesselsStore } from "@/lib/vessels-store";
 
 // Bucket size matches the route handler's `Cache-Control: max-age=60`.
@@ -20,13 +20,6 @@ const LIVE_TICK_MS = 1000;
 // Single-region MVP. The scrubber covers the protagonist (Malacca/Singapore);
 // inset regions (#11) get their own coverage-gap counter, not a scrub UI.
 const REGION: RegionId = "malaccaSingapore";
-
-interface HistoryResponseBody {
-  region: string;
-  windowStart: string;
-  windowEnd: string;
-  rows: HistoryRow[];
-}
 
 /**
  * Headless effect: drives the scrubber's two background loops.
@@ -65,6 +58,9 @@ export function useTripHistory(): void {
         `&bucket=${encodeURIComponent(bucketDate.toISOString())}`;
       try {
         const resp = await fetch(url, { signal: ac.signal });
+        // Late-abort gate: if a newer bucket aborted us between fetch
+        // resolving and now, don't warn for a response we're discarding.
+        if (ac.signal.aborted) return;
         if (!resp.ok) {
           console.warn(`[trip-history] ${resp.status} ${resp.statusText}`);
           return;

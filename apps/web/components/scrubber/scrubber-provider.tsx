@@ -20,10 +20,11 @@ interface ScrubberProviderProps {
  * output, single side-effecting hook call.
  */
 export default function ScrubberProvider({ initialScrubAt }: ScrubberProviderProps) {
-  // useState init runs exactly once before the first render. Setting
-  // Zustand state outside React's reconciler is safe and keeps the seed
-  // synchronous so useTripHistory's first effect picks up the seeded
-  // bucket directly.
+  // useState's lazy initializer runs once per mount; idempotent under
+  // StrictMode's dev double-invoke (re-running setScrubberMode/setScrubAt
+  // with the same values is a no-op). Setting Zustand state outside
+  // React's reconciler is safe and keeps the seed synchronous so
+  // useTripHistory's first effect picks up the seeded bucket directly.
   useState(() => {
     if (initialScrubAt === null) return null;
     const at = new Date(initialScrubAt);
