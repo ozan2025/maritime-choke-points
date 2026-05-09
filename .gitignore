@@ -44,3 +44,10 @@ coverage/
 # anyone accidentally reverts to that style.
 HANDOVER.md
 HANDOVER-*.md
+
+# Local-only session prompt files (never committed; ephemeral role briefings).
+# See "Session prompt files" in CONTRIBUTING.md. Overwritten each cycle —
+# AUTHOR_PROMPT.md is updated post-merge to brief the next author session;
+# REVIEWER_PROMPT.md is updated whenever a PR is pushed for review.
+AUTHOR_PROMPT.md
+REVIEWER_PROMPT.md
