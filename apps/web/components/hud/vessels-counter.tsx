@@ -9,14 +9,19 @@ const ACTIVE = "#F4A258";
 
 /**
  * Rendering buckets for the breakdown row. Collapses the seven internal
- * `ShipBucket` values into the five labels PRD §9 feature 4 lists.
- * `bulker` rolls into `cargo` for display only — the icon layer keeps
- * the seven-way distinction.
+ * `ShipBucket` values into four display columns.
+ *
+ * `bulker` rolls into `cargo` and `lng` rolls into `tank` for display
+ * only — the icon layer keeps the seven-way distinction so silhouettes
+ * stay sharp. The `lng` bucket itself is currently unreachable from
+ * `iconForShipType` (the AIS code 80–89 path always returns "tanker"
+ * pending a static-data + IMO-subcode disambiguation pass), so the
+ * dedicated LNG column would have read 0 forever; folding it into TANK
+ * keeps the bar honest until that enrichment lands.
  */
 const COLUMNS = [
-  { key: "tank", label: "TANK", buckets: ["tanker"] },
+  { key: "tank", label: "TANK", buckets: ["tanker", "lng"] },
   { key: "cargo", label: "CARGO", buckets: ["cargo", "bulker"] },
-  { key: "lng", label: "LNG", buckets: ["lng"] },
   { key: "pass", label: "PASS", buckets: ["passenger"] },
   { key: "other", label: "OTHER", buckets: ["fishing", "other"] },
 ] as const;
@@ -24,7 +29,7 @@ const COLUMNS = [
 const BAR_HEIGHT = 28;
 
 /**
- * Top-right HUD card. Big total + 5-column ship-type breakdown. Total
+ * Top-right HUD card. Big total + 4-column ship-type breakdown. Total
  * uses a vertical clip-path slot-machine reveal on change so the eye is
  * drawn to motion without a jarring flash.
  */
@@ -66,7 +71,7 @@ export function VesselsCounter() {
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-5 gap-2">
+        <div className="mt-3 grid grid-cols-4 gap-2">
           {columns.map((col, i) => {
             const ratio = max === 0 ? 0 : col.count / max;
             const opacity = 0.25 + 0.75 * ratio;

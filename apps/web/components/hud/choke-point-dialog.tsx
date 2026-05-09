@@ -13,7 +13,9 @@ import {
 const ACTIVE = "#F4A258";
 
 /**
- * Click-context copy. Verbatim from PRD §9 feature 5 — the copy is
+ * Click-context copy. Adapted from PRD §9 feature 5; sentence-cased and
+ * period-terminated for standalone dialog use (the PRD source is a
+ * lowercase em-dash bullet continuation). The wording itself is
  * calibrated to the project's voice and should not be paraphrased.
  */
 const CONTEXT: Record<

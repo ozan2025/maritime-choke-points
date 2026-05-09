@@ -115,10 +115,7 @@ export default function Scrubber() {
     >
       <div className="mb-2.5 flex items-center justify-between font-mono text-[10px] tabular-nums text-white/45 uppercase tracking-[0.18em]">
         <span>−60 min</span>
-        <span
-          className="text-[11px] tracking-[0.2em]"
-          style={{ color: isLive ? "#F4A258" : "#F4A258" }}
-        >
+        <span className="text-[11px] tracking-[0.2em]" style={{ color: "#F4A258" }}>
           {offsetLabel}
         </span>
         <span>now</span>

@@ -21,7 +21,7 @@ import { useVesselsStore } from "@/lib/vessels-store";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 // Singapore Strait. PRD §11 Q2: zoom 9 is the starting guess. A custom
-// Mapbox Studio dark fork is tracked as a #29 follow-up — until then
+// Mapbox Studio dark fork is tracked as follow-up #31 — until then
 // dark-v10 is the interim choice (#16 reviewer + HANDOVER punt #13:
 // dark-v11 has too little land/water contrast at zoom 9 to pick out
 // the strait).
@@ -158,11 +158,11 @@ export default function WorldMap() {
 
       // In live mode, extend each trip's tail with the freshest WS
       // observation. Without this the trail can lag the head by up to
-      // one bucket boundary (60 s) — visibly so for moving vessels. The
-      // benefit is per-trip object reference stability across rebuilds:
+      // one bucket boundary (60 s) — visibly so for moving vessels.
       // TripsLayer's default dataComparator is whole-array reference
-      // equality (so the layer always re-extracts attributes when
-      // `live.size > 0`), but the *per-trip* identity preserved here
+      // equality, so the outer array being new on every rebuild
+      // (`live.size > 0`) means the layer re-runs accessors regardless;
+      // the per-trip object identity preserved by extendTripsWithLive
       // keeps deck.gl's downstream attribute caches warm.
       const tripsForLayer: readonly Trip[] =
         state.scrubberMode === "live"
@@ -206,8 +206,11 @@ export default function WorldMap() {
               getColor: selectedMmsi,
             },
             pickable: true,
-            // Anchor the icon at its center so the click hit area
-            // matches what the eye tracks.
+            // Pixels with alpha below this threshold are excluded from
+            // the picking pass — keeps the corners of the silhouette's
+            // bounding box from registering clicks where there's no
+            // visible vessel. The icon descriptor's default anchor is
+            // already center, so positional alignment needs no opt-in.
             alphaCutoff: 0.05,
             onClick: (info) => {
               const obj = info.object as VesselHead | undefined;

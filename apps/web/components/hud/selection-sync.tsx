@@ -19,11 +19,13 @@ interface SelectionSyncProps {
  * Suspense boundary, but selection feedback shouldn't wait on a DB read.
  */
 export function SelectionSync({ mmsi }: SelectionSyncProps) {
+  // No cleanup: when the URL transitions A → B the parent re-renders
+  // with the new mmsi prop and this effect re-runs with B. Adding a
+  // null-clear in cleanup would write null between A and B and fire
+  // the world-map subscriber four times instead of one. The effect
+  // itself handles `mmsi === null` (Sheet closed) on the prop side.
   useEffect(() => {
     useVesselsStore.getState().setSelectedMmsi(mmsi);
-    return () => {
-      useVesselsStore.getState().setSelectedMmsi(null);
-    };
   }, [mmsi]);
 
   return null;

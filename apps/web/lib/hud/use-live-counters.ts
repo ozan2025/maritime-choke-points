@@ -6,23 +6,6 @@ import { useEffect, useState } from "react";
 import { iconForShipType, type ShipBucket } from "@/lib/ais/ship-icons";
 import { useVesselsStore } from "@/lib/vessels-store";
 
-const BUCKETS: readonly ShipBucket[] = [
-  "tanker",
-  "cargo",
-  "bulker",
-  "lng",
-  "passenger",
-  "fishing",
-  "other",
-];
-
-const REGIONS: readonly RegionId[] = [
-  "malaccaSingapore",
-  "hormuzApproaches",
-  "babElMandeb",
-  "suez",
-];
-
 export interface LiveCounters {
   total: number;
   byBucket: Record<ShipBucket, number>;
@@ -89,5 +72,3 @@ export function useLiveCounters(): LiveCounters {
 
   return counters;
 }
-
-export { BUCKETS as VISIBLE_BUCKETS, REGIONS as VISIBLE_REGIONS };
