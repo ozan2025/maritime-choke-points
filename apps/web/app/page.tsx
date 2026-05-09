@@ -83,10 +83,12 @@ function parseScrubAt(raw: string | undefined): string | null {
 }
 
 /**
- * `?layer=heat` opts into the heatmap mode; anything else (missing,
- * malformed) falls back to icons. The URL value is short (`heat`) so
- * the canonical share-link doesn't bloat with a multi-character mode.
+ * Opts into the heatmap mode. `heat` is the canonical short form
+ * `LayerModeToggle` writes; `heatmap` is also accepted because the
+ * toggle's visible label is "Heatmap" and a hand-typed share link is a
+ * reasonable user behavior. Anything else (missing, malformed) falls
+ * back to icons.
  */
 function parseLayer(raw: string | undefined): LayerMode {
-  return raw === "heat" ? "heatmap" : "icons";
+  return raw === "heat" || raw === "heatmap" ? "heatmap" : "icons";
 }

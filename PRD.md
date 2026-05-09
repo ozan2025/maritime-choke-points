@@ -474,6 +474,12 @@ Per Leaf AI Studio brand:
 - **Body text neutral:** `#555555`
 - **Map background:** custom dark satellite (Mapbox Studio, post-M3)
 
+Heatmap density tints (M4 #12 — scoped to the ship-type heatmap layer
+only; the IconLayer continues to highlight in `#F4A258`):
+- **Tank density:** `#F4A258` (reuses the brand orange)
+- **Cargo density:** `#5DA9E9` (cool cyan)
+- **Passenger density:** `#9DCB6A` (warm green)
+
 ---
 
 ## 13. Glossary

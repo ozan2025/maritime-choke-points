@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useState } from "react";
 
 import type { VesselSearchResult } from "@/lib/queries/vessel-search";
 
@@ -25,6 +25,8 @@ interface AsyncState {
   status: "idle" | "ok" | "error";
 }
 
+const EMPTY_SNAPSHOT: AsyncState = { q: "", results: [], status: "idle" };
+
 /**
  * Powers the ⌘K palette. `useDeferredValue` is the React 19-native
  * debounce — typing stays responsive (the input shows the latest `q`
@@ -40,13 +42,28 @@ interface AsyncState {
  * is pending its fetch result, the snapshot still belongs to the prior
  * query → `loading`. Avoids the `react-hooks/set-state-in-effect` rule
  * trip that an in-effect `setStatus("loading")` would cause.
+ *
+ * The "type abc → backspace fully → re-type abc" edge case is handled
+ * by clearing the snapshot in the public `setQ` whenever the input
+ * transitions to empty. setState inside an event handler is fine
+ * (the lint rule only fires for setState in effect bodies), and clearing
+ * results when the input clears is the right UX anyway.
  */
 export function useVesselSearch(): UseVesselSearch {
-  const [q, setQ] = useState("");
+  const [q, setQRaw] = useState("");
   const deferredQ = useDeferredValue(q);
   const trimmed = deferredQ.trim();
 
-  const [snapshot, setSnapshot] = useState<AsyncState>({ q: "", results: [], status: "idle" });
+  const [snapshot, setSnapshot] = useState<AsyncState>(EMPTY_SNAPSHOT);
+
+  const setQ = useCallback((next: string) => {
+    setQRaw(next);
+    // Invalidate the snapshot when the input goes empty so a same-string
+    // re-type kicks off a fresh fetch instead of flashing prior results.
+    if (next.trim().length === 0) {
+      setSnapshot(EMPTY_SNAPSHOT);
+    }
+  }, []);
 
   useEffect(() => {
     if (trimmed.length === 0) return;

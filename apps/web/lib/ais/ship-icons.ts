@@ -130,10 +130,3 @@ export const HEATMAP_COLOR_RANGES: Record<HeatmapGroup, RGBA[]> = {
   cargo: ramp(93, 169, 233),
   pass: ramp(157, 203, 106),
 };
-
-/** Display label for the heatmap legend / toggle. */
-export const HEATMAP_GROUP_LABEL: Record<HeatmapGroup, string> = {
-  tank: "TANK",
-  cargo: "CARGO",
-  pass: "PASS",
-};

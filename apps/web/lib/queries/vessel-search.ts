@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getDb, vesselPositionsRecent, vessels } from "@maritime/db";
-import { and, exists, gte, ilike, like, or, sql, type SQL } from "drizzle-orm";
+import { and, exists, gte, ilike, lt, or, sql, type SQL } from "drizzle-orm";
 
 /**
  * Single result row returned by `searchVessels`. The shape is the wire
@@ -15,7 +15,9 @@ export interface VesselSearchResult {
 }
 
 export interface SearchPredicates {
-  /** Numeric MMSI prefix when `q` is all digits, e.g. "525". */
+  /** Numeric MMSI prefix when `q` is all digits, e.g. "525". Length is
+   *  whatever the user typed; the query expands it to an integer-range
+   *  predicate so the PK B-tree can serve it (no `mmsi::text LIKE`). */
   mmsiPrefix: string | null;
   /** Case-insensitive substring on `vessels.ship_name`, e.g. "%KAHALA%". */
   namePattern: string | null;
@@ -26,6 +28,23 @@ export interface SearchPredicates {
    * the MID lookup.
    */
   mmsiPrefixesFromMid: string[];
+}
+
+/**
+ * MMSI is canonically a 9-digit identifier. Treating it as such lets a
+ * shorter prefix `p` of length `n` cover all integers in
+ * `[p * 10^(9-n), (p+1) * 10^(9-n))`, which is index-friendly against
+ * the `vessels.mmsi` PK. Used for both the user-typed numeric prefix
+ * and the MID-derived flag prefixes (which are always length 3).
+ */
+const MMSI_DIGITS = 9;
+
+function prefixToIntegerRange(prefix: string): SQL {
+  const n = prefix.length;
+  const span = 10 ** (MMSI_DIGITS - n);
+  const lo = Number(prefix) * span;
+  const hi = lo + span;
+  return and(gte(vessels.mmsi, lo), lt(vessels.mmsi, hi))!;
 }
 
 const RECENT_WINDOW_HOURS = 48;
@@ -46,21 +65,13 @@ export async function searchVessels(
 ): Promise<VesselSearchResult[]> {
   const ors: SQL[] = [];
   if (preds.mmsiPrefix !== null) {
-    ors.push(like(sql<string>`${vessels.mmsi}::text`, `${preds.mmsiPrefix}%`));
+    ors.push(prefixToIntegerRange(preds.mmsiPrefix));
   }
   if (preds.namePattern !== null) {
     ors.push(ilike(vessels.shipName, preds.namePattern));
   }
   if (preds.mmsiPrefixesFromMid.length > 0) {
-    // Map "525" → bounds [525_000_000, 526_000_000) so the predicate uses
-    // integer ranges (index-friendly) rather than a text cast per prefix.
-    // OR all bucket ranges together.
-    const ranges: SQL[] = preds.mmsiPrefixesFromMid.map((p) => {
-      const lo = Number(p) * 1_000_000;
-      const hi = lo + 1_000_000;
-      return and(gte(vessels.mmsi, lo), sql`${vessels.mmsi} < ${hi}`)!;
-    });
-    ors.push(or(...ranges)!);
+    ors.push(or(...preds.mmsiPrefixesFromMid.map(prefixToIntegerRange))!);
   }
 
   if (ors.length === 0) return [];
@@ -84,10 +95,12 @@ export async function searchVessels(
             .where(
               and(
                 sql`${vesselPositionsRecent.mmsi} = ${vessels.mmsi}`,
-                gte(
-                  vesselPositionsRecent.observedAt,
-                  sql`now() - interval '${sql.raw(String(RECENT_WINDOW_HOURS))} hours'`,
-                ),
+                // `RECENT_WINDOW_HOURS` is a module-private compile-time
+                // constant, never user input — the literal embedded in
+                // the SQL template is the simplest typed form. If the
+                // window ever becomes runtime-driven, swap to
+                // `make_interval(hours => ${RECENT_WINDOW_HOURS})`.
+                gte(vesselPositionsRecent.observedAt, sql`now() - interval '48 hours'`),
               ),
             ),
         ),
@@ -100,3 +113,7 @@ export async function searchVessels(
 
   return rows;
 }
+
+/** Re-exported so the constant remains visible to anyone reading the
+ *  module (the value is also documented in the route handler comment). */
+export { RECENT_WINDOW_HOURS };
