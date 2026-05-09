@@ -78,24 +78,54 @@ and ticket without copy-pasting prompts between chats:
   the original author session was terminated. Whichever cadence fired
   most recently, the file describes whatever the next author session
   needs to do.
-- **`REVIEWER_PROMPT.md`** — briefing for the next _reviewer_ session
-  (or re-review pass). Updated by the author session right before
-  stopping each PR push (initial push and any fixup push).
+- **`REVIEWER_PROMPT.md`** — briefing for the _first-pass_ reviewer
+  session. Updated by the author session right before stopping the
+  initial PR push. **Re-reviews are different** — see "Re-review
+  cadence" below.
 
 Both files are gitignored. Each is overwritten in place — never
 accumulated. The verbal interface for switching sessions becomes:
 
-| Situation                                                  | Say to the new session                              |
-| ---------------------------------------------------------- | --------------------------------------------------- |
-| Starting a new ticket (fresh author session)               | "read `AUTHOR_PROMPT.md` and go"                    |
-| Reviewing a fresh PR (fresh reviewer session)              | "read `REVIEWER_PROMPT.md` and proceed"             |
-| Reviewer just finished, your author session is still alive | "review is done, address it"                        |
-| Reviewer just finished, original author session is gone    | "read `AUTHOR_PROMPT.md` and address review"        |
-| Author has pushed fixups (fresh reviewer session)          | "read `REVIEWER_PROMPT.md` and proceed" (re-review) |
+| Situation                                                  | Say to the new session                                          |
+| ---------------------------------------------------------- | --------------------------------------------------------------- |
+| Starting a new ticket (fresh author session)               | "read `AUTHOR_PROMPT.md` and go"                                |
+| Reviewing a fresh PR (fresh reviewer session)              | "read `REVIEWER_PROMPT.md` and proceed"                         |
+| Reviewer just finished, your author session is still alive | "review is done, address it"                                    |
+| Reviewer just finished, original author session is gone    | "read `AUTHOR_PROMPT.md` and address review"                    |
+| Author pushed fixups (fresh reviewer session, re-review)   | "re-review the fixups on PR #N" — see "Re-review cadence" below |
 
-### Conventional structure
+### Re-review cadence (asymmetric with first-pass)
 
-Both files are free-form Markdown but conventionally lead with:
+The first-pass review and the re-review have different information
+needs, and the prompt files should reflect that:
+
+- **First-pass review.** Reviewer is cold to the PR. The prompt should
+  be detailed: bootstrap reading list, "things to focus on," locked
+  decisions, verification recipe. The structure under "Conventional
+  structure" applies in full.
+- **Re-review.** Reviewer already cleared the prior pass and has all
+  the project-convention context loaded. The fixup commit message and
+  the author's PR comment already carry the item-by-item breakdown
+  (which findings were taken, which punted with rationale). A
+  rewritten `REVIEWER_PROMPT.md` would mostly duplicate the GH timeline.
+
+  **Default for re-review: do not rewrite `REVIEWER_PROMPT.md`.** Hand
+  off verbally instead — point at the PR and the fixup SHA. Only
+  rewrite the file if there is something genuinely novel for the
+  re-reviewer beyond the diff (e.g. "I took option B from your
+  suggestion and option A tripped a lint rule — here's why," or "the
+  fixup touches an unrelated area as a side-effect of X"). When you
+  do rewrite for a re-review, keep it short — a one-screen pointer,
+  not a recapitulation of the prior prompt.
+
+  This trims the per-cycle overhead without weakening the discipline:
+  even non-blocking fixups still go back through the reviewer session
+  before squash-merge ("Reviewer hand-off" rule above).
+
+### Conventional structure (first-pass prompts)
+
+First-pass `AUTHOR_PROMPT.md` and `REVIEWER_PROMPT.md` are free-form
+Markdown but conventionally lead with:
 
 1. A one-sentence role line (`You are the author session for…`).
 2. A bootstrap reading list pointing at `PRD.md`, `CONTRIBUTING.md`,
@@ -105,6 +135,9 @@ Both files are free-form Markdown but conventionally lead with:
    prior cycles.
 5. The stop condition (e.g. "after PR opens with green CI, stop and
    tell the project owner to start a fresh reviewer session").
+
+Re-review hand-offs do not need this structure — see the cadence note
+above.
 
 ### Separation of concerns
 
