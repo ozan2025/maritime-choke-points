@@ -1,5 +1,6 @@
 "use client";
 
+import { REGION_IDS } from "@maritime/shared";
 import { useEffect } from "react";
 
 import { useVesselsStore } from "./vessels-store";
@@ -29,7 +30,13 @@ export function useVesselsStream(): void {
     });
 
     client.connect();
-    client.subscribe(["malaccaSingapore"]);
+    // Subscribe to every region the worker collects. The HUD's
+    // choke-points row reads counts for all six (M5 #38) and the worker
+    // fan-out is `client.subscriptions.has(event.region)` — a narrower
+    // browser subscription would zero out tiles that the worker is
+    // actively populating in Postgres. The viewport-filter granularity
+    // discussion (PRD §11 Q4) lives a level below this and is unaffected.
+    client.subscribe([...REGION_IDS]);
 
     return () => {
       client.disconnect();

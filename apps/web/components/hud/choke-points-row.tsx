@@ -15,13 +15,16 @@ interface TileSpec {
   label: string;
 }
 
-// Order matches PRD §9 feature 5's table layout. Malacca first as the
-// protagonist; the three coverage-gap regions follow.
+// Order: Malacca first as the protagonist (PRD §9 feature 5 table); the
+// three coverage-gap regions follow; Bosphorus + Panama (M5 #38) close
+// the row as the additional live-data choke points.
 const TILES: readonly TileSpec[] = [
   { region: "malaccaSingapore", label: "MALACCA" },
   { region: "suez", label: "SUEZ" },
   { region: "babElMandeb", label: "BAB el-MANDEB" },
   { region: "hormuzApproaches", label: "HORMUZ" },
+  { region: "bosphorus", label: "BOSPHORUS" },
+  { region: "panama", label: "PANAMA" },
 ];
 
 interface ChokePointTileProps {
@@ -46,7 +49,11 @@ function ChokePointTile({ tile, count, active, index, onClick }: ChokePointTileP
       }}
       whileHover={{ y: -2 }}
       className={cn(
-        "group pointer-events-auto relative w-[140px] cursor-pointer overflow-hidden",
+        // Width shrunk from 140px → 116px when M5 #38 grew the row from
+        // 4 to 6 tiles. 6 × 116 + 5 × 12 (gap-3) = 756px — fits a
+        // 1280px viewport with breathing room and stays single-row down
+        // to ~800px before wrapping is needed.
+        "group pointer-events-auto relative w-[116px] cursor-pointer overflow-hidden",
         "rounded-lg border border-white/[0.06] bg-[rgba(8,12,22,0.55)]",
         "backdrop-blur-md backdrop-saturate-150",
         "shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.04)]",
@@ -77,12 +84,14 @@ function ChokePointTile({ tile, count, active, index, onClick }: ChokePointTileP
 /**
  * Bottom row of glass tiles — one per critical choke point. Sits above
  * the scrubber. Click any tile to open a context dialog with the
- * verbatim PRD §9 feature 5 explanation for that region.
+ * region's status copy.
  *
- * Why hardcoded zeros for Suez / Bab el-Mandeb / Hormuz: PRD §2
- * validation evidence (2026-05-06) — AISStream returns 0 for those
- * bboxes. The browser also only subscribes to `malaccaSingapore`
- * today; expanding the subscription is a follow-up if coverage shifts.
+ * Region populations:
+ *  - Malacca: ~25% of global trade; the protagonist.
+ *  - Suez / Bab el-Mandeb / Hormuz: AISStream returns 0 for those
+ *    bboxes per PRD §2 validation. Counters reflect that honestly.
+ *  - Bosphorus / Panama (M5 #38): strong terrestrial AIS coverage; live
+ *    counts populate within ~1 minute of worker connect.
  */
 export function ChokePointsRow() {
   const { byRegion } = useLiveCounters();

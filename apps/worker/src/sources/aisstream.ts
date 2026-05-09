@@ -13,9 +13,15 @@ const INITIAL_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 30_000;
 
 /** AISStream regions this source subscribes to. Hormuz validated as 0
- *  messages on the free firehose (PRD §2) — kept so the M2-#11 inset
- *  counter has a feed if/when traffic resumes. */
-const SUBSCRIBED_REGIONS: readonly RegionId[] = ["malaccaSingapore", "hormuzApproaches"];
+ *  messages on the free firehose (PRD §2) — kept so the inset counter
+ *  has a feed if/when traffic resumes. Bosphorus + Panama added in
+ *  M5 #38; both have strong terrestrial AIS coverage. */
+const SUBSCRIBED_REGIONS: readonly RegionId[] = [
+  "malaccaSingapore",
+  "hormuzApproaches",
+  "bosphorus",
+  "panama",
+];
 
 /** Minimal shape of an AISStream subscription frame (sent on open). */
 interface SubscriptionFrame {

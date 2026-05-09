@@ -41,7 +41,7 @@ const CHOKE_POINTS = {
 
 ## MVP features
 
-- Live vessel positions in all 4 choke points (toggleable per region)
+- Live vessel positions in all 6 choke points (toggleable per region)
 - Color by AIS ship type: tanker / cargo / LNG / passenger / other
 - Click vessel → modal with name, flag, cargo type, destination, speed, draft
 - Counter strip: *"X tankers in transit through Hormuz right now"*

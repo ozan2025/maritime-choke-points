@@ -46,6 +46,18 @@ const CONTEXT: Record<
     statusTone: "muted",
     body: "Strait effectively closed to commercial shipping since Feb 2026; counter will animate up if/when traffic resumes.",
   },
+  bosphorus: {
+    name: "Bosphorus",
+    status: "live",
+    statusTone: "live",
+    body: "Narrow strait between Black Sea and Mediterranean; ~50,000 ship transits per year, strong terrestrial AIS coverage.",
+  },
+  panama: {
+    name: "Panama",
+    status: "live",
+    statusTone: "live",
+    body: "Canal-bound transits between Atlantic and Pacific; ~14,000 transits per year, strong terrestrial AIS coverage along both approaches.",
+  },
 };
 
 interface ChokePointDialogProps {
