@@ -62,29 +62,36 @@ If a hook fails, fix the underlying issue. Do not bypass with `--no-verify`.
 
 The author session does **not** review its own work — cognitive bias from
 having just written the code. Open the PR, then hand off to a separate Claude
-Code session (or human reviewer) for review.
+Code session (or human reviewer) for review. See "Session prompt files" below
+for the file-based mechanism that carries the hand-off without copy-pasting
+prompts between chats.
 
 ## Session prompt files
 
 Two local-only files at repo root brief the next session about its role
 and ticket without copy-pasting prompts between chats:
 
-- **`AUTHOR_PROMPT.md`** — briefing for the next _author_ session.
-  Updated by the previous author session at end-of-cycle (post-merge),
-  pointing at the next ticket to pick up.
+- **`AUTHOR_PROMPT.md`** — briefing for the next _author_ session. Updated
+  by the previous author session at two cadence points: (1) at end-of-cycle
+  post-merge, pointing at the next ticket; and (2) right before stopping
+  each PR push, so a fresh author session can address review feedback if
+  the original author session was terminated. Whichever cadence fired
+  most recently, the file describes whatever the next author session
+  needs to do.
 - **`REVIEWER_PROMPT.md`** — briefing for the next _reviewer_ session
   (or re-review pass). Updated by the author session right before
-  stopping each PR push.
+  stopping each PR push (initial push and any fixup push).
 
 Both files are gitignored. Each is overwritten in place — never
 accumulated. The verbal interface for switching sessions becomes:
 
-| Situation                | Say to the new session                                                                             |
-| ------------------------ | -------------------------------------------------------------------------------------------------- |
-| Starting the next ticket | "read `AUTHOR_PROMPT.md` and go"                                                                   |
-| Reviewing a fresh PR     | "read `REVIEWER_PROMPT.md` and proceed"                                                            |
-| Reviewer just finished   | "review is done, check it" (no prompt file needed — the author session reads PR comments via `gh`) |
-| Author has pushed fixups | "read `REVIEWER_PROMPT.md` and proceed" (re-review pass)                                           |
+| Situation                                                  | Say to the new session                              |
+| ---------------------------------------------------------- | --------------------------------------------------- |
+| Starting a new ticket (fresh author session)               | "read `AUTHOR_PROMPT.md` and go"                    |
+| Reviewing a fresh PR (fresh reviewer session)              | "read `REVIEWER_PROMPT.md` and proceed"             |
+| Reviewer just finished, your author session is still alive | "review is done, address it"                        |
+| Reviewer just finished, original author session is gone    | "read `AUTHOR_PROMPT.md` and address review"        |
+| Author has pushed fixups (fresh reviewer session)          | "read `REVIEWER_PROMPT.md` and proceed" (re-review) |
 
 ### Conventional structure
 
@@ -97,7 +104,7 @@ Both files are free-form Markdown but conventionally lead with:
 4. Locked decisions and "things that bite if missed" carried from
    prior cycles.
 5. The stop condition (e.g. "after PR opens with green CI, stop and
-   tell Ozan to start a fresh reviewer session").
+   tell the project owner to start a fresh reviewer session").
 
 ### Separation of concerns
 
