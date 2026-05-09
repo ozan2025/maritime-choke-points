@@ -40,7 +40,7 @@ non-trivial issue includes:
   not relitigate. References to the PR or issue that locked the decision
   keep them traceable.
 - **Minimum-scope first cut** — when the work is the first slice of a
-  larger area, frame the cut explicitly. PR #38 demonstrated the value:
+  larger area, frame the cut explicitly. #38 demonstrated the value:
   scoping Bosphorus + Panama as a region-list extension (not a recenter
   selector and not a per-region filter) made the PR shippable without an
   ambiguous boundary. The follow-ups landed in `HANDOVER.md` as named
@@ -140,7 +140,7 @@ just that the surface rendered.
 Author sessions may not downgrade this check to "optional," "noise," or
 "covered by the static gates." It is a hard rule because:
 
-PR #38 added Bosphorus and Panama as new regions. The data plumbing was
+PR #39 added Bosphorus and Panama as new regions. The data plumbing was
 correct (worker subscribed, persistence wrote rows, HUD tiles rendered).
 But the browser subscription was still pinned to `["malaccaSingapore"]`,
 so the new tile counts would have been permanently zero in production.
