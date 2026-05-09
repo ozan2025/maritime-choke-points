@@ -30,6 +30,14 @@ export interface VesselsState {
   setScrubberMode: (mode: ScrubberMode) => void;
   setScrubAt: (at: Date) => void;
   setTrips: (trips: Trip[], bucketAt: Date) => void;
+
+  // Selection slice (M4 #29) -------------------------------------------
+  /** MMSI of the vessel currently highlighted by the IconLayer. Driven
+   * by the `?mmsi=` searchParam — the page mirrors it into the store on
+   * first render so the layer's getColor/getSize accessors and the
+   * Sheet share one source of truth. */
+  selectedMmsi: number | null;
+  setSelectedMmsi: (mmsi: number | null) => void;
 }
 
 // Map keys are numeric mmsi — never stringify (per #17 issue notes).
@@ -60,4 +68,8 @@ export const useVesselsStore = create<VesselsState>()((set) => ({
   setScrubberMode: (mode) => set({ scrubberMode: mode }),
   setScrubAt: (at) => set({ scrubAt: at }),
   setTrips: (trips, bucketAt) => set({ trips, tripsBucketAt: bucketAt }),
+
+  // Selection slice -----------------------------------------------------
+  selectedMmsi: null,
+  setSelectedMmsi: (mmsi) => set({ selectedMmsi: mmsi }),
 }));

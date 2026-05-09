@@ -40,10 +40,11 @@ export default function Scrubber() {
 
   // Local 1 Hz wall-clock so the slider visually drifts left in scrubbed
   // mode as fixed scrubAt becomes increasingly historical relative to now.
-  // Initial Date.now() runs on the client only — no hydration mismatch
-  // because the parent gates this component behind a Client Component
-  // tree (no SSR of the slider thumb position).
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  // Seeded as `null` so SSR + first client hydration both render the
+  // LIVE/right-edge thumb position deterministically. The first interval
+  // tick (≤1 s after mount) supplies a real `Date.now()` and the slider
+  // values update on the next paint without a hydration mismatch.
+  const [nowMs, setNowMs] = useState<number | null>(null);
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(id);
@@ -54,6 +55,7 @@ export default function Scrubber() {
   // trails and no clear way to recover.
   useEffect(() => {
     if (scrubberMode !== "scrubbed") return;
+    if (nowMs === null) return;
     if (nowMs - scrubAt.getTime() > WINDOW_SEC * 1000) {
       writeUrlForLive(router, searchParams);
       setScrubberMode("live");
@@ -61,10 +63,13 @@ export default function Scrubber() {
     }
   }, [scrubberMode, scrubAt, nowMs, router, searchParams, setScrubAt, setScrubberMode]);
 
-  const offsetSec = Math.max(0, Math.min(WINDOW_SEC, (nowMs - scrubAt.getTime()) / 1000));
+  // Pre-mount: render LIVE / right-edge so SSR and first hydration agree.
+  const offsetSec =
+    nowMs === null ? 0 : Math.max(0, Math.min(WINDOW_SEC, (nowMs - scrubAt.getTime()) / 1000));
   const sliderValue = WINDOW_SEC - offsetSec;
 
   const onValueChange = (values: number[]): void => {
+    if (nowMs === null) return;
     const v = values[0];
     if (v === undefined) return;
     const offSec = WINDOW_SEC - v;
@@ -78,6 +83,7 @@ export default function Scrubber() {
   };
 
   const onValueCommit = (values: number[]): void => {
+    if (nowMs === null) return;
     const v = values[0];
     if (v === undefined) return;
     const offSec = WINDOW_SEC - v;
@@ -93,22 +99,32 @@ export default function Scrubber() {
     setScrubAt(at);
   };
 
-  const isLive = scrubberMode === "live";
+  const isLive = scrubberMode === "live" || nowMs === null;
   const offsetLabel = isLive ? "LIVE" : `−${formatOffset(offsetSec)}`;
 
   return (
     <div
       data-slot="scrubber"
-      className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 border-t border-border/40 bg-background/70 px-6 py-3 backdrop-blur-sm"
+      className={[
+        "pointer-events-auto absolute inset-x-0 bottom-0 z-20",
+        "border-t border-white/[0.06] bg-[rgba(8,12,22,0.55)]",
+        "backdrop-blur-md backdrop-saturate-150",
+        "shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+        "px-6 py-3.5",
+      ].join(" ")}
     >
-      <div className="mb-2 flex items-center justify-between font-mono text-xs tabular-nums text-muted-foreground">
+      <div className="mb-2.5 flex items-center justify-between font-mono text-[10px] tabular-nums text-white/45 uppercase tracking-[0.18em]">
         <span>−60 min</span>
-        <span className={isLive ? "font-medium text-primary" : "font-medium text-foreground"}>
+        <span
+          className="text-[11px] tracking-[0.2em]"
+          style={{ color: isLive ? "#F4A258" : "#F4A258" }}
+        >
           {offsetLabel}
         </span>
         <span>now</span>
       </div>
       <Slider
+        name="scrubber-offset"
         min={0}
         max={WINDOW_SEC}
         step={1}
@@ -116,6 +132,16 @@ export default function Scrubber() {
         onValueChange={onValueChange}
         onValueCommit={onValueCommit}
         aria-label="Timeline scrubber"
+        className={[
+          // Track: muted glass; range fill: brand orange.
+          "[&>*[data-slot=slider-track]]:bg-white/[0.08]",
+          "[&>*[data-slot=slider-track]>*[data-slot=slider-range]]:bg-[#F4A258]",
+          // Thumb: brand orange, no white outline, soft shadow.
+          "[&>*[data-slot=slider-thumb]]:bg-[#F4A258]",
+          "[&>*[data-slot=slider-thumb]]:border-[#F4A258]",
+          "[&>*[data-slot=slider-thumb]]:ring-[#F4A258]/40",
+          "[&>*[data-slot=slider-thumb]]:shadow-[0_0_0_3px_rgba(244,162,88,0.20)]",
+        ].join(" ")}
       />
     </div>
   );
