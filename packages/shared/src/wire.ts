@@ -50,3 +50,34 @@ export interface ErrorMessage {
 }
 
 export type ServerMessage = SnapshotMessage | PositionMessage | ErrorMessage;
+
+// ---------------------------------------------------------------------
+// History HTTP wire (M4 #27)
+//
+// These describe the JSON shape of `GET /api/positions/history`. The
+// route is a Next.js Route Handler, not the worker WebSocket — so this
+// is a *separate* contract from the ServerMessage envelope above. Lives
+// here so the route handler, the client fetch hook, and the trip-grouping
+// helpers all share one source of truth instead of three hand-aligned
+// declarations.
+// ---------------------------------------------------------------------
+
+/** A single observation as transmitted on the history wire. `t` is unix
+ * epoch seconds; the conversion from `observed_at: timestamptz` happens
+ * at the route boundary so the client can feed deck.gl directly. */
+export interface HistoryRow {
+  mmsi: number;
+  lat: number;
+  lon: number;
+  t: number;
+}
+
+/** Envelope returned by `GET /api/positions/history`. */
+export interface HistoryResponseBody {
+  region: RegionId;
+  /** ISO-8601 UTC. */
+  windowStart: string;
+  /** ISO-8601 UTC; equal to the `bucket` request param when supplied. */
+  windowEnd: string;
+  rows: HistoryRow[];
+}

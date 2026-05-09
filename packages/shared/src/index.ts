@@ -1,2 +1,2 @@
-export * from "./regions.js";
-export * from "./wire.js";
+export * from "./regions.ts";
+export * from "./wire.ts";
