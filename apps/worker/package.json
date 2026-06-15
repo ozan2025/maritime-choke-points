@@ -11,12 +11,12 @@
   "devDependencies": {
     "@types/node": "^22",
     "@types/ws": "^8.18.1",
-    "tsx": "^4.19.2"
+    "tsx": "^4.22.4"
   },
   "dependencies": {
     "@maritime/db": "workspace:^",
     "@maritime/shared": "workspace:^",
-    "drizzle-orm": "^0.36.4",
-    "ws": "^8.20.0"
+    "drizzle-orm": "^0.45.2",
+    "ws": "^8.21.0"
   }
 }
