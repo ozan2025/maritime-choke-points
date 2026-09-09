@@ -16,7 +16,7 @@
   "dependencies": {
     "@maritime/db": "workspace:^",
     "@maritime/shared": "workspace:^",
-    "drizzle-orm": "^0.36.4",
+    "drizzle-orm": "^0.45.2",
     "ws": "^8.20.0"
   }
 }
