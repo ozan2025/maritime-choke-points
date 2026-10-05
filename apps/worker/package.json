@@ -10,13 +10,13 @@
   },
   "devDependencies": {
     "@types/node": "^22",
-    "@types/ws": "^8.18.1",
-    "tsx": "^4.19.2"
+    "@types/ws": "^8.18.2",
+    "tsx": "^4.23.15"
   },
   "dependencies": {
     "@maritime/db": "workspace:^",
     "@maritime/shared": "workspace:^",
-    "drizzle-orm": "^0.36.4",
-    "ws": "^8.20.0"
+    "drizzle-orm": "^0.45.3",
+    "ws": "^8.22.0"
   }
 }
